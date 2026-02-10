@@ -41,6 +41,7 @@ export default function AdminLoginScreen() {
     try {
       await adminLogin(email.trim(), password, adminKey.trim());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/");
     } catch (e: any) {
       setError(e.message || "Authentication failed");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
