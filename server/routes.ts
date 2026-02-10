@@ -972,6 +972,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/groups/:id/call", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const groupId = paramId(req.params.id);
+      const group = await storage.getGroupById(groupId);
+      if (!group) return res.status(404).json({ message: "Group not found" });
+      const members = await storage.getGroupMembers(groupId);
+      const { callType } = req.body;
+      const label = callType === "video" ? "Video Call" : "Voice Call";
+      for (const member of members) {
+        const userId = (member as any).userId || (member as any).id;
+        if (userId && userId !== req.user!.userId) {
+          await storage.createNotification({
+            userId,
+            title: `${label} Started`,
+            message: `A ${label.toLowerCase()} has been started in "${group.name}". Join now!`,
+            type: "meeting",
+          });
+        }
+      }
+      res.json({ message: `${label} notification sent to ${members.length} members` });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/my-groups", authMiddleware, async (req: Request, res: Response) => {
     try {
       const groups = await storage.getGroupsByUser(req.user!.userId);

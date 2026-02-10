@@ -17,9 +17,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiUpload } from "@/lib/api";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
+import * as DocumentPicker from "expo-document-picker";
 
 export default function AdminAssignmentsScreen() {
   const insets = useSafeAreaInsets();
@@ -32,6 +33,8 @@ export default function AdminAssignmentsScreen() {
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [maxMarks, setMaxMarks] = useState("100");
   const [dueDate, setDueDate] = useState("");
+  const [attachedFile, setAttachedFile] = useState<{ uri: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const { data: assignments, isLoading, refetch } = useQuery({
     queryKey: ["all-assignments"],
@@ -62,9 +65,25 @@ export default function AdminAssignmentsScreen() {
     setSelectedCourseId(null);
     setMaxMarks("100");
     setDueDate("");
+    setAttachedFile(null);
   }
 
-  function handleCreate() {
+  async function pickFile() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      setAttachedFile({ uri: asset.uri, name: asset.name });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Alert.alert("Error", "Failed to pick file: " + err.message);
+    }
+  }
+
+  async function handleCreate() {
     if (!title.trim()) {
       Alert.alert("Validation", "Title is required");
       return;
@@ -73,12 +92,28 @@ export default function AdminAssignmentsScreen() {
       Alert.alert("Validation", "Please select a course");
       return;
     }
+
+    let fileUrl: string | undefined;
+    if (attachedFile) {
+      try {
+        setUploading(true);
+        const uploadResult = await apiUpload("/api/upload/assignment", attachedFile.uri, attachedFile.name, "application/pdf");
+        fileUrl = uploadResult.url;
+      } catch (err: any) {
+        Alert.alert("Upload Error", err.message || "Failed to upload file");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
     createMutation.mutate({
       courseId: selectedCourseId,
       title: title.trim(),
       description: description.trim() || undefined,
       dueDate: dueDate.trim() || undefined,
       maxMarks: parseInt(maxMarks) || 100,
+      fileUrl,
     });
   }
 
@@ -256,12 +291,26 @@ export default function AdminAssignmentsScreen() {
                 onChangeText={setDueDate}
               />
 
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Attachment (PDF)</Text>
+              <Pressable style={styles.uploadButton} onPress={pickFile}>
+                <Ionicons name="cloud-upload-outline" size={18} color={Colors.primary} />
+                <Text style={styles.uploadButtonText}>
+                  {attachedFile ? attachedFile.name : "Upload File"}
+                </Text>
+              </Pressable>
+              {attachedFile && (
+                <Pressable onPress={() => setAttachedFile(null)} style={styles.removeFileRow}>
+                  <Ionicons name="close-circle" size={16} color={Colors.error} />
+                  <Text style={styles.removeFileText}>Remove</Text>
+                </Pressable>
+              )}
+
               <Pressable
-                style={[styles.createButton, createMutation.isPending && styles.createButtonDisabled]}
+                style={[styles.createButton, (createMutation.isPending || uploading) && styles.createButtonDisabled]}
                 onPress={handleCreate}
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || uploading}
               >
-                {createMutation.isPending ? (
+                {createMutation.isPending || uploading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
@@ -406,13 +455,40 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: 12,
   },
+  uploadButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderStyle: "dashed" as const,
+  },
+  uploadButtonText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+  },
+  removeFileRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    marginTop: 6,
+  },
+  removeFileText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
+  },
   createButton: {
     backgroundColor: Colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     marginTop: 24,
     marginBottom: 12,

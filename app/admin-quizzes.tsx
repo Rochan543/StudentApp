@@ -21,6 +21,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/api";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 
 export default function AdminQuizzesScreen() {
   const insets = useSafeAreaInsets();
@@ -113,6 +115,28 @@ export default function AdminQuizzesScreen() {
     setNegativeMarking(false);
     setIsPublished(false);
     setQuestionsJson("");
+  }
+
+  async function pickQuestionsFile() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/json", "text/plain"],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      if (Platform.OS === "web") {
+        const response = await globalThis.fetch(asset.uri);
+        const text = await response.text();
+        setQuestionsJson(text);
+      } else {
+        const content = await FileSystem.readAsStringAsync(asset.uri);
+        setQuestionsJson(content);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Alert.alert("Error", "Failed to read file: " + err.message);
+    }
   }
 
   function formatTime(minutes: number | null) {
@@ -296,9 +320,13 @@ export default function AdminQuizzesScreen() {
 
               <Text style={styles.label}>Questions (JSON)</Text>
               <Text style={styles.helperText}>
-                Paste a JSON array of questions. Format:{"\n"}
-                [{"{"}"text": "Q?", "options": ["A","B","C","D"], "correctAnswer": 0, "marks": 1{"}"}]
+                Paste JSON or upload a .json file.{"\n"}
+                Format: [{"{"}"text": "Q?", "options": ["A","B","C","D"], "correctAnswer": 0, "marks": 1{"}"}]
               </Text>
+              <Pressable style={styles.uploadButton} onPress={pickQuestionsFile}>
+                <Ionicons name="cloud-upload-outline" size={18} color={Colors.primary} />
+                <Text style={styles.uploadButtonText}>Upload JSON File</Text>
+              </Pressable>
               <TextInput
                 style={[styles.input, styles.jsonInput]}
                 value={questionsJson}
@@ -483,13 +511,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 17,
   },
+  uploadButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderStyle: "dashed" as const,
+    marginBottom: 8,
+  },
+  uploadButtonText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+  },
   submitButton: {
     backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     marginTop: 20,
     marginBottom: 20,

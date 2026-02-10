@@ -86,6 +86,26 @@ export default function AdminGroupsScreen() {
     },
   });
 
+  const callMutation = useMutation({
+    mutationFn: ({ groupId, callType }: { groupId: number; callType: string }) =>
+      apiPost(`/api/groups/${groupId}/call`, { callType }),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Call Started", "All group members have been notified.");
+    },
+    onError: (error: Error) => {
+      Alert.alert("Error", error.message || "Failed to start call");
+    },
+  });
+
+  function startCall(groupId: number, groupName: string, callType: "voice" | "video") {
+    const label = callType === "video" ? "Video Call" : "Voice Call";
+    Alert.alert(`Start ${label}`, `Notify all members of "${groupName}" about a ${label.toLowerCase()}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Start", onPress: () => callMutation.mutate({ groupId, callType }) },
+    ]);
+  }
+
   function resetForm() {
     setShowCreateModal(false);
     setName("");
@@ -148,22 +168,26 @@ export default function AdminGroupsScreen() {
         <View style={styles.cardFooter}>
           <View style={styles.footerLeft}>
             <View style={styles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color={Colors.textTertiary} />
-              <Text style={styles.metaText}>{formatDate(item.createdAt)}</Text>
-            </View>
-            <View style={styles.metaRow}>
               <Ionicons name="people-outline" size={14} color={Colors.textTertiary} />
               <Text style={styles.metaText}>{memberCount} members</Text>
             </View>
           </View>
-          <Pressable
-            testID="members-button"
-            style={styles.membersBtn}
-            onPress={() => openMembers(item)}
-          >
-            <Ionicons name="person-add-outline" size={14} color={Colors.primary} />
-            <Text style={styles.membersBtnText}>Members</Text>
-          </Pressable>
+          <View style={styles.footerActions}>
+            <Pressable onPress={() => startCall(item.id, item.name, "voice")} style={styles.callBtn}>
+              <Ionicons name="call-outline" size={16} color={Colors.success} />
+            </Pressable>
+            <Pressable onPress={() => startCall(item.id, item.name, "video")} style={styles.callBtn}>
+              <Ionicons name="videocam-outline" size={16} color={Colors.info} />
+            </Pressable>
+            <Pressable
+              testID="members-button"
+              style={styles.membersBtn}
+              onPress={() => openMembers(item)}
+            >
+              <Ionicons name="person-add-outline" size={14} color={Colors.primary} />
+              <Text style={styles.membersBtnText}>Members</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     );
@@ -328,7 +352,9 @@ const styles = StyleSheet.create({
   footerLeft: { gap: 4 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
-  membersBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.primary + "10", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  footerActions: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
+  callBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.background, justifyContent: "center" as const, alignItems: "center" as const, borderWidth: 1, borderColor: Colors.borderLight },
+  membersBtn: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: Colors.primary + "10", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   membersBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.primary },
   emptyState: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },

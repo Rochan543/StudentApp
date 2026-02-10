@@ -513,6 +513,11 @@ export const storage = {
     await db.delete(schema.groupMembers).where(and(eq(schema.groupMembers.groupId, groupId), eq(schema.groupMembers.userId, userId)));
   },
 
+  async getGroupById(groupId: number) {
+    const [group] = await db.select().from(schema.groups).where(eq(schema.groups.id, groupId)).limit(1);
+    return group || null;
+  },
+
   async getGroupMembers(groupId: number) {
     return db.select({
       id: schema.users.id,
