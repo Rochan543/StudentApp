@@ -9,6 +9,7 @@ import {
   jsonb,
   real,
   serial,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -33,7 +34,9 @@ export const courses = pgTable("courses", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url"),
+  brochureUrl: text("brochure_url"),
   price: real("price").notNull().default(0),
+  duration: integer("duration").default(60),
   createdBy: integer("created_by").notNull(),
   isPublished: boolean("is_published").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -78,6 +81,8 @@ export const assignments = pgTable("assignments", {
   fileUrl: text("file_url"),
   dueDate: timestamp("due_date"),
   maxMarks: integer("max_marks").notNull().default(100),
+  assignedTo: jsonb("assigned_to").$type<number[]>(),
+  questionSet: text("question_set"),
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -102,6 +107,8 @@ export const quizzes = pgTable("quizzes", {
   timeLimit: integer("time_limit").notNull().default(30),
   negativeMarking: boolean("negative_marking").notNull().default(false),
   isPublished: boolean("is_published").notNull().default(false),
+  assignedTo: jsonb("assigned_to").$type<number[]>(),
+  questionSet: text("question_set"),
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -113,6 +120,7 @@ export const questions = pgTable("questions", {
   options: jsonb("options").$type<string[]>().notNull(),
   correctAnswer: integer("correct_answer").notNull(),
   marks: integer("marks").notNull().default(1),
+  questionSet: text("question_set"),
   orderIndex: integer("order_index").notNull().default(0),
 });
 
@@ -145,7 +153,10 @@ export const meetings = pgTable("meetings", {
   description: text("description"),
   link: text("link").notNull(),
   courseId: integer("course_id"),
+  groupId: integer("group_id"),
+  assignedUserId: integer("assigned_user_id"),
   meetingType: text("meeting_type").notNull().default("class"),
+  assignTo: text("assign_to").notNull().default("course"),
   scheduledAt: timestamp("scheduled_at").notNull(),
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -167,12 +178,20 @@ export const groups = pgTable("groups", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const groupMembers = pgTable("group_members", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  userId: integer("user_id").notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+});
+
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").notNull(),
   receiverId: integer("receiver_id"),
   groupId: integer("group_id"),
   content: text("content").notNull(),
+  messageType: text("message_type").notNull().default("text"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -215,6 +234,42 @@ export const dailyWork = pgTable("daily_work", {
   content: text("content"),
   fileUrl: text("file_url"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+});
+
+export const leaveRequests = pgTable("leave_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  date: text("date").notNull(),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("pending"),
+  reviewedBy: integer("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const attendanceStreak = pgTable("attendance_streak", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  date: text("date").notNull(),
+  status: text("status").notNull().default("present"),
+});
+
+export const roadmaps = pgTable("roadmaps", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const roadmapItems = pgTable("roadmap_items", {
+  id: serial("id").primaryKey(),
+  roadmapId: integer("roadmap_id").notNull(),
+  courseId: integer("course_id").notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
+  isUnlocked: boolean("is_unlocked").notNull().default(false),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  unlockedAt: timestamp("unlocked_at"),
+  completedAt: timestamp("completed_at"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -332,7 +387,12 @@ export type Coupon = typeof coupons.$inferSelect;
 export type Meeting = typeof meetings.$inferSelect;
 export type Attendance = typeof attendance.$inferSelect;
 export type Group = typeof groups.$inferSelect;
+export type GroupMember = typeof groupMembers.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type LeaderboardEntry = typeof leaderboard.$inferSelect;
 export type Banner = typeof banners.$inferSelect;
+export type LeaveRequest = typeof leaveRequests.$inferSelect;
+export type AttendanceStreak = typeof attendanceStreak.$inferSelect;
+export type Roadmap = typeof roadmaps.$inferSelect;
+export type RoadmapItem = typeof roadmapItems.$inferSelect;

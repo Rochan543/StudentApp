@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, asc, and, sql, ilike, gte, lte } from "drizzle-orm";
+import { eq, desc, asc, and, sql, ilike, gte, lte, isNull, inArray } from "drizzle-orm";
 import * as schema from "@shared/schema";
 
 export const storage = {
@@ -258,7 +258,7 @@ export const storage = {
     return c;
   },
 
-  async createMeeting(data: { title: string; description?: string; link: string; courseId?: number; meetingType?: string; scheduledAt: Date; createdBy: number }) {
+  async createMeeting(data: { title: string; description?: string; link: string; courseId?: number; groupId?: number; assignedUserId?: number; assignTo?: string; meetingType?: string; scheduledAt: Date; createdBy: number }) {
     const [m] = await db.insert(schema.meetings).values(data).returning();
     return m;
   },
@@ -459,26 +459,36 @@ export const storage = {
     const enrolled = await db.select({ courseId: schema.enrollments.courseId }).from(schema.enrollments).where(eq(schema.enrollments.userId, userId));
     if (enrolled.length === 0) return [];
     const courseIds = enrolled.map(e => e.courseId);
-    return db.select({
+    const results = await db.select({
       assignment: schema.assignments,
       course: { id: schema.courses.id, title: schema.courses.title },
     }).from(schema.assignments)
       .innerJoin(schema.courses, eq(schema.assignments.courseId, schema.courses.id))
       .where(sql`${schema.assignments.courseId} IN (${sql.join(courseIds.map(id => sql`${id}`), sql`, `)})`)
       .orderBy(desc(schema.assignments.createdAt));
+    return results.filter(r => {
+      const assignedTo = r.assignment.assignedTo;
+      if (!assignedTo || assignedTo.length === 0) return true;
+      return assignedTo.includes(userId);
+    });
   },
 
   async getQuizzesForUser(userId: number) {
     const enrolled = await db.select({ courseId: schema.enrollments.courseId }).from(schema.enrollments).where(eq(schema.enrollments.userId, userId));
     if (enrolled.length === 0) return [];
     const courseIds = enrolled.map(e => e.courseId);
-    return db.select({
+    const results = await db.select({
       quiz: schema.quizzes,
       course: { id: schema.courses.id, title: schema.courses.title },
     }).from(schema.quizzes)
       .innerJoin(schema.courses, eq(schema.quizzes.courseId, schema.courses.id))
       .where(sql`${schema.quizzes.courseId} IN (${sql.join(courseIds.map(id => sql`${id}`), sql`, `)})`)
       .orderBy(desc(schema.quizzes.createdAt));
+    return results.filter(r => {
+      const assignedTo = r.quiz.assignedTo;
+      if (!assignedTo || assignedTo.length === 0) return true;
+      return assignedTo.includes(userId);
+    });
   },
 
   async deleteGroup(id: number) {
@@ -490,5 +500,167 @@ export const storage = {
     for (let i = 0; i < entries.length; i++) {
       await db.update(schema.leaderboard).set({ rank: i + 1 }).where(eq(schema.leaderboard.id, entries[i].id));
     }
+  },
+
+  async addGroupMember(data: { groupId: number; userId: number }) {
+    const existing = await db.select().from(schema.groupMembers).where(and(eq(schema.groupMembers.groupId, data.groupId), eq(schema.groupMembers.userId, data.userId)));
+    if (existing.length > 0) return existing[0];
+    const [m] = await db.insert(schema.groupMembers).values(data).returning();
+    return m;
+  },
+
+  async removeGroupMember(groupId: number, userId: number) {
+    await db.delete(schema.groupMembers).where(and(eq(schema.groupMembers.groupId, groupId), eq(schema.groupMembers.userId, userId)));
+  },
+
+  async getGroupMembers(groupId: number) {
+    return db.select({
+      id: schema.users.id,
+      name: schema.users.name,
+      email: schema.users.email,
+      role: schema.users.role,
+    }).from(schema.groupMembers)
+      .innerJoin(schema.users, eq(schema.groupMembers.userId, schema.users.id))
+      .where(eq(schema.groupMembers.groupId, groupId));
+  },
+
+  async getGroupsByUser(userId: number) {
+    return db.select({
+      group: schema.groups,
+    }).from(schema.groupMembers)
+      .innerJoin(schema.groups, eq(schema.groupMembers.groupId, schema.groups.id))
+      .where(eq(schema.groupMembers.userId, userId));
+  },
+
+  async isGroupMember(groupId: number, userId: number) {
+    const [m] = await db.select().from(schema.groupMembers).where(and(eq(schema.groupMembers.groupId, groupId), eq(schema.groupMembers.userId, userId)));
+    return !!m;
+  },
+
+  async createLeaveRequest(data: { userId: number; date: string; reason: string }) {
+    const [lr] = await db.insert(schema.leaveRequests).values(data).returning();
+    return lr;
+  },
+
+  async getLeaveRequestsByUser(userId: number) {
+    return db.select().from(schema.leaveRequests).where(eq(schema.leaveRequests.userId, userId)).orderBy(desc(schema.leaveRequests.createdAt));
+  },
+
+  async getAllLeaveRequests() {
+    return db.select({
+      leaveRequest: schema.leaveRequests,
+      user: { id: schema.users.id, name: schema.users.name },
+    }).from(schema.leaveRequests)
+      .innerJoin(schema.users, eq(schema.leaveRequests.userId, schema.users.id))
+      .orderBy(desc(schema.leaveRequests.createdAt));
+  },
+
+  async updateLeaveRequest(id: number, data: { status: string; reviewedBy: number }) {
+    const [lr] = await db.update(schema.leaveRequests).set({ ...data, reviewedAt: new Date() }).where(eq(schema.leaveRequests.id, id)).returning();
+    return lr;
+  },
+
+  async getApprovedLeaves(userId: number) {
+    return db.select().from(schema.leaveRequests).where(and(eq(schema.leaveRequests.userId, userId), eq(schema.leaveRequests.status, "approved")));
+  },
+
+  async markDailyAttendance(data: { userId: number; date: string; status?: string }) {
+    const existing = await db.select().from(schema.attendanceStreak).where(and(eq(schema.attendanceStreak.userId, data.userId), eq(schema.attendanceStreak.date, data.date)));
+    if (existing.length > 0) {
+      const [updated] = await db.update(schema.attendanceStreak).set({ status: data.status || "present" }).where(eq(schema.attendanceStreak.id, existing[0].id)).returning();
+      return updated;
+    }
+    const [a] = await db.insert(schema.attendanceStreak).values({ userId: data.userId, date: data.date, status: data.status || "present" }).returning();
+    return a;
+  },
+
+  async getAttendanceStreakByUser(userId: number) {
+    return db.select().from(schema.attendanceStreak).where(eq(schema.attendanceStreak.userId, userId)).orderBy(desc(schema.attendanceStreak.date));
+  },
+
+  async calculateStreak(userId: number) {
+    const records = await db.select().from(schema.attendanceStreak).where(eq(schema.attendanceStreak.userId, userId)).orderBy(desc(schema.attendanceStreak.date));
+    const totalDays = records.length;
+    const totalPresent = records.filter(r => r.status === "present").length;
+    let currentStreak = 0;
+    for (const record of records) {
+      if (record.status === "absent") break;
+      if (record.status === "present") currentStreak++;
+    }
+    return { currentStreak, totalPresent, totalDays };
+  },
+
+  async createRoadmap(data: { userId: number; createdBy: number }) {
+    const [r] = await db.insert(schema.roadmaps).values(data).returning();
+    return r;
+  },
+
+  async getRoadmapByUser(userId: number) {
+    const [r] = await db.select().from(schema.roadmaps).where(eq(schema.roadmaps.userId, userId));
+    return r;
+  },
+
+  async getRoadmapItems(roadmapId: number) {
+    return db.select({
+      roadmapItem: schema.roadmapItems,
+      course: { id: schema.courses.id, title: schema.courses.title, description: schema.courses.description, imageUrl: schema.courses.imageUrl },
+    }).from(schema.roadmapItems)
+      .innerJoin(schema.courses, eq(schema.roadmapItems.courseId, schema.courses.id))
+      .where(eq(schema.roadmapItems.roadmapId, roadmapId))
+      .orderBy(asc(schema.roadmapItems.orderIndex));
+  },
+
+  async addRoadmapItem(data: { roadmapId: number; courseId: number; orderIndex: number; isUnlocked?: boolean }) {
+    const [item] = await db.insert(schema.roadmapItems).values(data).returning();
+    return item;
+  },
+
+  async updateRoadmapItem(id: number, data: Partial<schema.RoadmapItem>) {
+    const [item] = await db.update(schema.roadmapItems).set(data).where(eq(schema.roadmapItems.id, id)).returning();
+    return item;
+  },
+
+  async deleteRoadmapItem(id: number) {
+    await db.delete(schema.roadmapItems).where(eq(schema.roadmapItems.id, id));
+  },
+
+  async getAllRoadmaps() {
+    return db.select({
+      roadmap: schema.roadmaps,
+      user: { id: schema.users.id, name: schema.users.name, email: schema.users.email },
+    }).from(schema.roadmaps)
+      .innerJoin(schema.users, eq(schema.roadmaps.userId, schema.users.id));
+  },
+
+  async getMeetingsForUser(userId: number) {
+    const enrolled = await db.select({ courseId: schema.enrollments.courseId }).from(schema.enrollments).where(eq(schema.enrollments.userId, userId));
+    const courseIds = enrolled.map(e => e.courseId);
+
+    const memberGroups = await db.select({ groupId: schema.groupMembers.groupId }).from(schema.groupMembers).where(eq(schema.groupMembers.userId, userId));
+    const groupIds = memberGroups.map(g => g.groupId);
+
+    const conditions: ReturnType<typeof sql>[] = [];
+
+    if (courseIds.length > 0) {
+      conditions.push(sql`(${schema.meetings.assignTo} = 'course' AND ${schema.meetings.courseId} IN (${sql.join(courseIds.map(id => sql`${id}`), sql`, `)}))`);
+    }
+
+    if (groupIds.length > 0) {
+      conditions.push(sql`(${schema.meetings.assignTo} = 'group' AND ${schema.meetings.groupId} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)}))`);
+    }
+
+    conditions.push(sql`(${schema.meetings.assignedUserId} = ${userId})`);
+    conditions.push(sql`(${schema.meetings.assignTo} = 'course' AND ${schema.meetings.courseId} IS NULL)`);
+
+    return db.select().from(schema.meetings)
+      .where(sql`(${sql.join(conditions, sql` OR `)})`)
+      .orderBy(desc(schema.meetings.scheduledAt));
+  },
+
+  async getQuestionsByQuizAndSet(quizId: number, questionSet?: string) {
+    if (questionSet) {
+      return db.select().from(schema.questions).where(and(eq(schema.questions.quizId, quizId), eq(schema.questions.questionSet, questionSet))).orderBy(asc(schema.questions.orderIndex));
+    }
+    return db.select().from(schema.questions).where(eq(schema.questions.quizId, quizId)).orderBy(asc(schema.questions.orderIndex));
   },
 };

@@ -1,0 +1,154 @@
+You are a senior full-stack engineer.
+
+Fix and implement the following issues exactly as described.
+
+---------------------------------------------------
+1. USER PANEL – COURSE CLICK ERROR
+---------------------------------------------------
+When user clicks on a course that admin posted, it is not opening and shows “something went wrong”.
+
+Fix:
+
+- Clicking a course must open course details page with image of the course and detailed description and course broucher pdf (stored in cloudinary). 
+- Route must load using courseId.
+- Fetch course data from backend using courseId.
+- Show proper error if course not found.
+
+---------------------------------------------------
+2. ADMIN PANEL – SCHEDULE MEETING NOT CREATING
+---------------------------------------------------
+Admin is unable to create scheduled meetings.
+
+Fix:
+
+- Admin must be able to create meeting.
+- Meeting fields:
+  title
+  date
+  time
+  meetingLink
+  meetingType (class / mock interview / live coding)
+  assignTo (course / group / individual user)
+
+- Student must see scheduled meetings.
+- Student must be able to join using link.
+
+---------------------------------------------------
+3. ASSIGNMENTS & QUIZZES – USER TO USER QUESTIONS
+---------------------------------------------------
+Admin should create or send questions.
+
+Each user must receive different question sets.
+
+Example:
+- User1 gets Set-A
+- User2 gets Set-B
+- User3 gets Set-C
+
+Not global question paper.
+
+Student must see only questions assigned to him.
+
+---------------------------------------------------
+4. EXAM MODE & RESULT AUTOMATION
+---------------------------------------------------
+Exam mode must:
+
+- Show only assigned questions.
+- Be timed.
+- Auto submit after time ends.
+
+After exam submission:
+
+- Result must automatically show in student dashboard.
+- Leaderboard must automatically update based on result.
+
+---------------------------------------------------
+5. GROUP CREATION & MEMBERS
+---------------------------------------------------
+Admin creates group.
+
+Admin selects users and adds them to group.
+
+Example:
+Group1:
+- Admin
+- UserX
+- UserY
+- UserZ
+
+Entire conversation only between these members.
+
+Same logic for other groups.
+
+---------------------------------------------------
+6. GROUP FEATURES
+---------------------------------------------------
+Inside group:
+
+- Group chat.
+- Audio call option.
+- Video call option.
+
+Admin must:
+
+- See group members list.
+- See member names.
+- Chat with members.
+- Receive notifications.
+
+---------------------------------------------------
+7. ATTENDANCE AS STREAKS 
+---------------------------------------------------
+Attendance must be tracked.
+
+- Attendance represented as streaks.
+- Overall day wise attendence must be calculated using attendance 
+
+---------------------------------------------------
+8. LEAVE REQUEST & APPROVAL
+---------------------------------------------------
+Student can request leave.
+
+Admin can approve or reject.
+
+If admin approves leave:
+
+- That day is considered holiday.
+- Holiday must NOT reduce attendance streak.
+- Holiday must be excluded from attendance calculation.
+
+---------------------------------------------------
+9. USER-SPECIFIC ROADMAP WITH LOCKING MECHANISM
+---------------------------------------------------
+Admin will send roadmap for every user individually.
+
+Example roadmap:
+
+- Python (Unlocked)
+- Advanced Python (Locked)
+- Django (Locked)
+- SQL (Locked)
+
+Rules:
+
+- At user registration time, admin assigns roadmap.
+- User sees roadmap with lock/unlock status.
+- User must click unlocked course to start.
+- Each course has fixed duration (60–90 days).
+- After user completes course:
+    - Admin reviews progress.
+    - If admin approves → next course lock opens.
+- User cannot access locked courses.
+- When next course unlocks:
+    - User can view roadmap.
+    - User can access resources of that subject.
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+All above points must work end-to-end without errors.
+
+Fix ONLY these items.
+Do NOT add new features.
+Do NOT redesign UI.

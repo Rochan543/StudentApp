@@ -514,7 +514,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const quiz = await storage.getQuizById(parseInt(req.params.id));
       if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-      const questions = await storage.getQuestionsByQuiz(quiz.id);
+      const quizAny = quiz as any;
+      let questions;
+      if (req.user!.role !== "admin" && quizAny.questionSet) {
+        questions = await storage.getQuestionsByQuizAndSet(quiz.id, quizAny.questionSet);
+      } else {
+        questions = await storage.getQuestionsByQuiz(quiz.id);
+      }
       const attempt = await storage.getQuizAttempt(quiz.id, req.user!.userId);
       const questionsForStudent = req.user!.role === "admin"
         ? questions
@@ -617,6 +623,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         await storage.updateLeaderboard(req.user!.userId, { quizPoints: score });
         await storage.recalculateRanks();
+        await storage.createNotification({
+          userId: req.user!.userId,
+          title: "Quiz Completed",
+          message: `You scored ${score}/${totalMarks} in ${quiz.title}`,
+          type: "info",
+        });
         return res.json(updated);
       }
 
@@ -765,8 +777,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/meetings", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
-      const meetings = await storage.getMeetings(courseId);
+      if (req.user!.role === "admin") {
+        const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
+        const meetings = await storage.getMeetings(courseId);
+        return res.json(meetings);
+      }
+      const meetings = await storage.getMeetingsForUser(req.user!.userId);
       res.json(meetings);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -894,7 +910,225 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/groups", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
       const group = await storage.createGroup({ ...req.body, createdBy: req.user!.userId });
+      await storage.addGroupMember({ groupId: group.id, userId: req.user!.userId });
       res.json(group);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Group Member routes
+  app.post("/api/groups/:id/members", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const groupId = parseInt(req.params.id);
+      const { userId } = req.body;
+      await storage.addGroupMember({ groupId, userId: req.user!.userId });
+      const member = await storage.addGroupMember({ groupId, userId });
+      await storage.createNotification({
+        userId,
+        title: "Added to Group",
+        message: `You have been added to a group`,
+        type: "info",
+      });
+      res.json(member);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/groups/:id/members/:userId", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const groupId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+      await storage.removeGroupMember(groupId, userId);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/groups/:id/members", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const groupId = parseInt(req.params.id);
+      const members = await storage.getGroupMembers(groupId);
+      res.json(members);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/my-groups", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const groups = await storage.getGroupsByUser(req.user!.userId);
+      res.json(groups);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Leave Request routes
+  app.post("/api/leave-requests", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { date, reason } = req.body;
+      const leaveRequest = await storage.createLeaveRequest({ userId: req.user!.userId, date, reason });
+      res.json(leaveRequest);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/leave-requests", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      if (req.user!.role === "admin") {
+        const leaveRequests = await storage.getAllLeaveRequests();
+        return res.json(leaveRequests);
+      }
+      const leaveRequests = await storage.getLeaveRequestsByUser(req.user!.userId);
+      res.json(leaveRequests);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.put("/api/leave-requests/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { status } = req.body;
+      const leaveRequest = await storage.updateLeaveRequest(parseInt(req.params.id), { status, reviewedBy: req.user!.userId });
+      if (leaveRequest && status === "approved") {
+        await storage.markDailyAttendance({ userId: leaveRequest.userId, date: leaveRequest.date, status: "holiday" });
+      }
+      if (leaveRequest) {
+        await storage.createNotification({
+          userId: leaveRequest.userId,
+          title: "Leave Request " + (status === "approved" ? "Approved" : "Rejected"),
+          message: `Your leave request for ${leaveRequest.date} has been ${status}`,
+          type: status === "approved" ? "success" : "warning",
+        });
+      }
+      res.json(leaveRequest);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Attendance Streak routes
+  app.post("/api/attendance-streak", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const date = req.body.date || new Date().toISOString().split("T")[0];
+      const record = await storage.markDailyAttendance({ userId: req.user!.userId, date });
+      res.json(record);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/attendance-streak", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const records = await storage.getAttendanceStreakByUser(req.user!.userId);
+      res.json(records);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/attendance-streak/stats", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const stats = await storage.calculateStreak(req.user!.userId);
+      res.json(stats);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Roadmap routes
+  app.post("/api/roadmaps", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { userId, items } = req.body;
+      const roadmap = await storage.createRoadmap({ userId, createdBy: req.user!.userId });
+      if (items && Array.isArray(items)) {
+        for (let i = 0; i < items.length; i++) {
+          await storage.addRoadmapItem({
+            roadmapId: roadmap.id,
+            courseId: items[i].courseId,
+            orderIndex: items[i].orderIndex ?? i,
+            isUnlocked: i === 0,
+          });
+        }
+      }
+      await storage.createNotification({
+        userId,
+        title: "Roadmap Created",
+        message: "A learning roadmap has been created for you",
+        type: "info",
+      });
+      res.json(roadmap);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/roadmaps", authMiddleware, adminMiddleware, async (_req: Request, res: Response) => {
+    try {
+      const roadmaps = await storage.getAllRoadmaps();
+      res.json(roadmaps);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/my-roadmap", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const roadmap = await storage.getRoadmapByUser(req.user!.userId);
+      if (!roadmap) return res.json(null);
+      const items = await storage.getRoadmapItems(roadmap.id);
+      res.json({ ...roadmap, items });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.put("/api/roadmap-items/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const updateData: any = { ...req.body };
+      if (updateData.isUnlocked) {
+        updateData.unlockedAt = new Date();
+      }
+      if (updateData.isCompleted) {
+        updateData.completedAt = new Date();
+      }
+      const item = await storage.updateRoadmapItem(parseInt(req.params.id), updateData);
+      if (item) {
+        const roadmapItems = await storage.getRoadmapItems(item.roadmapId);
+        const roadmapItem = roadmapItems.find(ri => ri.roadmapItem.id === item.id);
+        if (roadmapItem) {
+          const allRoadmaps = await storage.getAllRoadmaps();
+          const roadmapEntry = allRoadmaps.find((r: any) => {
+            const roadmap = r.roadmap || r;
+            return roadmap.id === item.roadmapId;
+          });
+          if (roadmapEntry) {
+            const userId = (roadmapEntry as any).roadmap?.userId || (roadmapEntry as any).userId;
+            if (userId) {
+              await storage.createNotification({
+                userId,
+                title: "Roadmap Updated",
+                message: `Your roadmap item has been updated`,
+                type: "info",
+              });
+            }
+          }
+        }
+      }
+      res.json(item);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/roadmap-items/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteRoadmapItem(parseInt(req.params.id));
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
