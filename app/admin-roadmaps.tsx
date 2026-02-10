@@ -59,10 +59,10 @@ export default function AdminRoadmapsScreen() {
 
   const updateItemMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => apiPut(`/api/roadmap-items/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
+    onSuccess: async () => {
+      const freshRoadmaps = await queryClient.fetchQuery({ queryKey: ["roadmaps"], queryFn: () => apiGet("/api/roadmaps") });
       if (selectedRoadmap) {
-        const updated = (roadmaps || []).find((r: any) => r.id === selectedRoadmap.id);
+        const updated = (freshRoadmaps || []).find((r: any) => r.id === selectedRoadmap.id);
         if (updated) setSelectedRoadmap(updated);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
