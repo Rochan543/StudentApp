@@ -1,0 +1,135 @@
+You are a senior full-stack engineer.
+
+Fix and implement the following issues exactly as described.
+
+---------------------------------------------------
+1. QUIZ CREATION NOT WORKING
+---------------------------------------------------
+Quiz creation is not working.
+
+Fix:
+
+- Admin must be able to create quizzes.
+- Admin must have option to upload questions in bulk.
+- Bulk upload must use Cloudinary.
+- System must extract:
+  - Questions
+  - Options
+- Admin must select correct answer after extraction.
+- Quiz must save successfully.
+- Quiz must reflect in user panel.
+
+---------------------------------------------------
+2. ASSIGNMENT BULK QUESTION UPLOAD
+---------------------------------------------------
+In assignments, there is no option to upload questions in bulk.
+
+Fix:
+
+- Admin must have bulk upload option.
+- Use Cloudinary for bulk question upload.
+- Extract questions properly.
+- Assign assignments correctly to users.
+
+---------------------------------------------------
+3. LEAVE REQUEST ERROR (ADMIN PANEL)
+---------------------------------------------------
+Leave request approval in admin panel is hitting error.
+
+Fix:
+
+- Admin must be able to view leave requests.
+- Admin must approve or reject without error.
+- Approved leave must update attendance correctly.
+
+---------------------------------------------------
+4. COURSE CLICK ERROR (ADMIN & USER PANEL)
+---------------------------------------------------
+Course is created successfully, but clicking on course hits “something went wrong”.
+
+Fix:
+
+- Course details page must open correctly.
+- Fetch course by courseId.
+- No errors when clicking course in admin panel.
+- No errors when clicking course in user panel.
+
+---------------------------------------------------
+5. GROUP MEMBER ADD ISSUE
+---------------------------------------------------
+In groups:
+
+- Admin sees users.
+- Admin marks/selects users.
+- No clear add option.
+- Group still shows 0 members.
+
+Fix:
+
+- Admin must explicitly add selected users to group.
+- Group member count must update correctly.
+- Admin must see correct number of members.
+
+---------------------------------------------------
+6. ROADMAP REFLECTION & LOCK APPROVAL ISSUE
+---------------------------------------------------
+Roadmaps are creating successfully.
+
+Problems:
+
+- Roadmaps are not reflecting in user panel.
+- Admin approves lock open.
+- Instead of unlocking next course, it marks course as completed.
+
+Fix:
+
+- Roadmap must reflect correctly in user panel.
+- Admin approval must unlock next course.
+- Do NOT auto mark course as completed.
+
+---------------------------------------------------
+7. USER PANEL COURSE CLICK ERROR
+---------------------------------------------------
+In user panel, clicking course again shows “something went wrong”.
+
+Fix:
+
+- Course must open without error.
+- Proper error handling only if course not found.
+
+---------------------------------------------------
+8. CHAT MESSAGE ORDER ISSUE
+---------------------------------------------------
+In user panel chat, messages are appearing in reverse order.
+
+Fix:
+
+- Messages must appear in correct chronological order.
+- Old messages on top, new messages at bottom.
+
+---------------------------------------------------
+9. GROUP CALL FUNCTIONALITY
+---------------------------------------------------
+In group call:
+
+- Clicking call does nothing.
+
+Fix:
+
+- Clicking call must send notification to group members and admin.
+- Notification must include:
+  - Join call
+  - Answer / Not Answer options
+- If member answers:
+  - Group call must start.
+- If not answered:
+  - Show not answered status.
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+All above functionalities must work properly without any failure.
+
+Fix ONLY these issues.
+Do NOT add new features.
+Do NOT redesign UI.

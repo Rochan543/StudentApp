@@ -48,7 +48,9 @@ export type CloudinaryFolder =
   | "lms/course-images"
   | "lms/course-pdfs"
   | "lms/assignments"
-  | "lms/submissions";
+  | "lms/submissions"
+  | "lms/banners"
+  | "lms/quizzes";
 
 export async function uploadToCloudinary(
   buffer: Buffer,

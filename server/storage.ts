@@ -323,7 +323,7 @@ export const storage = {
       .where(
         sql`(${schema.messages.senderId} = ${userId1} AND ${schema.messages.receiverId} = ${userId2}) OR (${schema.messages.senderId} = ${userId2} AND ${schema.messages.receiverId} = ${userId1})`
       )
-      .orderBy(asc(schema.messages.createdAt));
+      .orderBy(desc(schema.messages.createdAt));
   },
 
   async getGroupMessages(groupId: number) {

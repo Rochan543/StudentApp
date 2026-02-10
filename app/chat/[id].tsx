@@ -142,7 +142,7 @@ export default function ChatScreen() {
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={[...(messages || [])].reverse()}
+          data={messages || []}
           keyExtractor={(item) => item.id.toString()}
           inverted
           contentContainerStyle={styles.messageList}

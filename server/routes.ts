@@ -906,7 +906,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/groups", authMiddleware, async (_req: Request, res: Response) => {
     try {
       const groups = await storage.getGroups();
-      res.json(groups);
+      const groupsWithCount = await Promise.all(
+        groups.map(async (g) => {
+          const members = await storage.getGroupMembers(g.id);
+          return { ...g, memberCount: members.length };
+        })
+      );
+      res.json(groupsWithCount);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -986,7 +992,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (req.user!.role === "admin") {
         const leaveRequests = await storage.getAllLeaveRequests();
-        return res.json(leaveRequests);
+        const flat = leaveRequests.map((lr: any) => ({
+          ...lr.leaveRequest,
+          user: lr.user,
+          userName: lr.user?.name,
+        }));
+        return res.json(flat);
       }
       const leaveRequests = await storage.getLeaveRequestsByUser(req.user!.userId);
       res.json(leaveRequests);
