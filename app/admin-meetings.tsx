@@ -43,6 +43,12 @@ export default function AdminMeetingsScreen() {
   const [link, setLink] = useState("");
   const [meetingType, setMeetingType] = useState("class");
   const [scheduledDate, setScheduledDate] = useState("");
+  const today = new Date();
+  const [calendarMonth, setCalendarMonth] = useState(today.getMonth());
+  const [calendarYear, setCalendarYear] = useState(today.getFullYear());
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedHour, setSelectedHour] = useState<number>(9);
+  const [selectedMinute, setSelectedMinute] = useState<number>(0);
   const [assignTo, setAssignTo] = useState("course");
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -98,7 +104,75 @@ export default function AdminMeetingsScreen() {
     setSelectedCourseId(null);
     setSelectedGroupId(null);
     setSelectedUserId(null);
+    const now = new Date();
+    setCalendarMonth(now.getMonth());
+    setCalendarYear(now.getFullYear());
+    setSelectedDay(null);
+    setSelectedHour(9);
+    setSelectedMinute(0);
   }
+
+  function updateScheduledDate(day: number, hour: number, minute: number) {
+    const m = String(calendarMonth + 1).padStart(2, "0");
+    const d = String(day).padStart(2, "0");
+    const h = String(hour).padStart(2, "0");
+    const min = String(minute).padStart(2, "0");
+    setScheduledDate(`${calendarYear}-${m}-${d}T${h}:${min}:00`);
+  }
+
+  function handleDayPress(day: number) {
+    setSelectedDay(day);
+    updateScheduledDate(day, selectedHour, selectedMinute);
+  }
+
+  function handleHourPress(hour: number) {
+    setSelectedHour(hour);
+    if (selectedDay) updateScheduledDate(selectedDay, hour, selectedMinute);
+  }
+
+  function handleMinutePress(minute: number) {
+    setSelectedMinute(minute);
+    if (selectedDay) updateScheduledDate(selectedDay, selectedHour, minute);
+  }
+
+  function goToPrevMonth() {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear(calendarYear - 1);
+    } else {
+      setCalendarMonth(calendarMonth - 1);
+    }
+  }
+
+  function goToNextMonth() {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear(calendarYear + 1);
+    } else {
+      setCalendarMonth(calendarMonth + 1);
+    }
+  }
+
+  function isDayPast(day: number) {
+    const d = new Date(calendarYear, calendarMonth, day);
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return d < todayStart;
+  }
+
+  function getCalendarDays() {
+    const firstDay = new Date(calendarYear, calendarMonth, 1).getDay();
+    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+    const blanks: (number | null)[] = Array(firstDay).fill(null);
+    const days: (number | null)[] = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    return [...blanks, ...days];
+  }
+
+  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const HOURS = Array.from({ length: 24 }, (_, i) => i);
+  const MINUTES = [0, 15, 30, 45];
+
+  const isPrevMonthDisabled = calendarYear === today.getFullYear() && calendarMonth <= today.getMonth();
 
   function getTypeInfo(type: string) {
     return MEETING_TYPES.find((t) => t.value === type) || MEETING_TYPES[0];
@@ -332,14 +406,69 @@ export default function AdminMeetingsScreen() {
               </>
             )}
 
-            <Text style={styles.inputLabel}>Scheduled Date (YYYY-MM-DD HH:MM)</Text>
-            <TextInput
-              style={styles.input}
-              value={scheduledDate}
-              onChangeText={setScheduledDate}
-              placeholder="2026-03-15 14:00"
-              placeholderTextColor={Colors.textTertiary}
-            />
+            <Text style={styles.inputLabel}>Scheduled Date & Time</Text>
+            <View style={styles.calendarContainer}>
+              <View style={styles.calendarNav}>
+                <Pressable onPress={goToPrevMonth} disabled={isPrevMonthDisabled} style={styles.calendarNavBtn}>
+                  <Ionicons name="chevron-back" size={20} color={isPrevMonthDisabled ? Colors.textTertiary : Colors.text} />
+                </Pressable>
+                <Text style={styles.calendarMonthLabel}>{MONTH_NAMES[calendarMonth]} {calendarYear}</Text>
+                <Pressable onPress={goToNextMonth} style={styles.calendarNavBtn}>
+                  <Ionicons name="chevron-forward" size={20} color={Colors.text} />
+                </Pressable>
+              </View>
+              <View style={styles.calendarWeekRow}>
+                {WEEKDAYS.map((wd) => (
+                  <View key={wd} style={styles.calendarWeekCell}>
+                    <Text style={styles.calendarWeekText}>{wd}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.calendarGrid}>
+                {getCalendarDays().map((day, idx) => {
+                  if (day === null) {
+                    return <View key={`blank-${idx}`} style={styles.calendarDayCell} />;
+                  }
+                  const past = isDayPast(day);
+                  const isSelected = selectedDay === day && calendarMonth === new Date(scheduledDate || "").getMonth() && calendarYear === new Date(scheduledDate || "").getFullYear();
+                  const isToday = day === today.getDate() && calendarMonth === today.getMonth() && calendarYear === today.getFullYear();
+                  return (
+                    <Pressable
+                      key={`day-${day}`}
+                      style={[styles.calendarDayCell, isSelected && styles.calendarDayCellSelected, isToday && !isSelected && styles.calendarDayCellToday]}
+                      onPress={() => !past && handleDayPress(day)}
+                      disabled={past}
+                    >
+                      <Text style={[styles.calendarDayText, past && styles.calendarDayTextPast, isSelected && styles.calendarDayTextSelected]}>
+                        {day}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <Text style={styles.inputLabel}>Hour</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeScrollRow} contentContainerStyle={styles.timeScrollContent}>
+              {HOURS.map((h) => (
+                <Pressable key={`h-${h}`} style={[styles.timeChip, selectedHour === h && styles.timeChipSelected]} onPress={() => handleHourPress(h)}>
+                  <Text style={[styles.timeChipText, selectedHour === h && styles.timeChipTextSelected]}>
+                    {String(h).padStart(2, "0")}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.inputLabel}>Minute</Text>
+            <View style={styles.minuteRow}>
+              {MINUTES.map((m) => (
+                <Pressable key={`m-${m}`} style={[styles.timeChip, styles.minuteChip, selectedMinute === m && styles.timeChipSelected]} onPress={() => handleMinutePress(m)}>
+                  <Text style={[styles.timeChipText, selectedMinute === m && styles.timeChipTextSelected]}>
+                    :{String(m).padStart(2, "0")}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
 
             <Pressable
               style={[styles.saveBtn, (!title || !link) && styles.saveBtnDisabled]}
@@ -444,4 +573,106 @@ const styles = StyleSheet.create({
   saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 24 },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  calendarContainer: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 12,
+  },
+  calendarNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  calendarNavBtn: {
+    padding: 4,
+  },
+  calendarMonthLabel: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  calendarWeekRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  calendarWeekCell: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  calendarWeekText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textTertiary,
+  },
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  calendarDayCell: {
+    width: "14.28%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calendarDayCellSelected: {
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+  },
+  calendarDayCellToday: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderRadius: 20,
+  },
+  calendarDayText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  calendarDayTextPast: {
+    color: Colors.textTertiary,
+  },
+  calendarDayTextSelected: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_700Bold",
+  },
+  timeScrollRow: {
+    maxHeight: 40,
+  },
+  timeScrollContent: {
+    gap: 6,
+    paddingVertical: 2,
+  },
+  timeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  timeChipSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  timeChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  timeChipTextSelected: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+  },
+  minuteRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  minuteChip: {
+    flex: 1,
+    alignItems: "center",
+  },
 });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,22 +8,112 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  TextInput,
+  ScrollView,
+  Switch,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost } from "@/lib/api";
 import Colors from "@/constants/colors";
+import * as Haptics from "expo-haptics";
 
 export default function AdminQuizzesScreen() {
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const queryClient = useQueryClient();
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+  const [timeLimit, setTimeLimit] = useState("30");
+  const [negativeMarking, setNegativeMarking] = useState(false);
+  const [isPublished, setIsPublished] = useState(false);
+  const [questionsJson, setQuestionsJson] = useState("");
 
   const { data: quizzes, isLoading, refetch } = useQuery({
     queryKey: ["all-quizzes"],
     queryFn: () => apiGet("/api/all-quizzes"),
   });
+
+  const { data: courses } = useQuery({
+    queryKey: ["courses"],
+    queryFn: () => apiGet("/api/courses"),
+    enabled: modalVisible,
+  });
+
+  const createQuizMutation = useMutation({
+    mutationFn: async () => {
+      if (!title.trim()) throw new Error("Title is required");
+      if (!selectedCourseId) throw new Error("Please select a course");
+
+      let parsedQuestions: any[] = [];
+      if (questionsJson.trim()) {
+        try {
+          parsedQuestions = JSON.parse(questionsJson.trim());
+          if (!Array.isArray(parsedQuestions)) throw new Error("Questions must be a JSON array");
+          for (let i = 0; i < parsedQuestions.length; i++) {
+            const q = parsedQuestions[i];
+            if (!q.text || !Array.isArray(q.options) || q.options.length < 2 || typeof q.correctAnswer !== "number") {
+              throw new Error(`Question ${i + 1} is invalid. Each question needs text, options (array), and correctAnswer (number).`);
+            }
+          }
+        } catch (e: any) {
+          if (e.message.startsWith("Question")) throw e;
+          throw new Error("Invalid JSON format: " + e.message);
+        }
+      }
+
+      const quiz: any = await apiPost("/api/quizzes", {
+        courseId: selectedCourseId,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        timeLimit: parseInt(timeLimit) || 30,
+        negativeMarking,
+        isPublished,
+      });
+
+      const quizId = quiz.id;
+
+      for (let i = 0; i < parsedQuestions.length; i++) {
+        const q = parsedQuestions[i];
+        await apiPost("/api/questions", {
+          quizId,
+          text: q.text,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          marks: q.marks || 1,
+          orderIndex: i,
+        });
+      }
+
+      return quiz;
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["all-quizzes"] });
+      resetForm();
+      setModalVisible(false);
+    },
+    onError: (error: Error) => {
+      Alert.alert("Error", error.message);
+    },
+  });
+
+  function resetForm() {
+    setTitle("");
+    setDescription("");
+    setSelectedCourseId(null);
+    setTimeLimit("30");
+    setNegativeMarking(false);
+    setIsPublished(false);
+    setQuestionsJson("");
+  }
 
   function formatTime(minutes: number | null) {
     if (!minutes) return "No limit";
@@ -78,7 +168,9 @@ export default function AdminQuizzesScreen() {
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>All Quizzes</Text>
-        <View style={{ width: 22 }} />
+        <Pressable testID="add-quiz-button" onPress={() => setModalVisible(true)}>
+          <Ionicons name="add" size={24} color={Colors.primary} />
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -100,6 +192,143 @@ export default function AdminQuizzesScreen() {
           }
         />
       )}
+
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Quiz</Text>
+              <Pressable onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.label}>Title *</Text>
+              <TextInput
+                style={styles.input}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Enter quiz title"
+                placeholderTextColor={Colors.textTertiary}
+              />
+
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Optional description"
+                placeholderTextColor={Colors.textTertiary}
+                multiline
+                numberOfLines={3}
+              />
+
+              <Text style={styles.label}>Course *</Text>
+              <View style={styles.courseList}>
+                {courses?.map((course: any) => (
+                  <Pressable
+                    key={course.id}
+                    style={styles.courseOption}
+                    onPress={() => setSelectedCourseId(course.id)}
+                  >
+                    <Ionicons
+                      name={selectedCourseId === course.id ? "radio-button-on" : "radio-button-off"}
+                      size={20}
+                      color={selectedCourseId === course.id ? Colors.primary : Colors.textTertiary}
+                    />
+                    <Text
+                      style={[
+                        styles.courseOptionText,
+                        selectedCourseId === course.id && { color: Colors.primary },
+                      ]}
+                    >
+                      {course.title}
+                    </Text>
+                  </Pressable>
+                ))}
+                {courses?.length === 0 && (
+                  <Text style={styles.helperText}>No courses available</Text>
+                )}
+              </View>
+
+              <Text style={styles.label}>Time Limit (minutes)</Text>
+              <TextInput
+                style={styles.input}
+                value={timeLimit}
+                onChangeText={setTimeLimit}
+                placeholder="30"
+                placeholderTextColor={Colors.textTertiary}
+                keyboardType="numeric"
+              />
+
+              <View style={styles.switchRow}>
+                <View>
+                  <Text style={styles.switchLabel}>Negative Marking</Text>
+                  <Text style={styles.switchSubLabel}>Deduct marks for wrong answers</Text>
+                </View>
+                <Switch
+                  value={negativeMarking}
+                  onValueChange={setNegativeMarking}
+                  trackColor={{ false: Colors.borderLight, true: Colors.primaryLight }}
+                  thumbColor={negativeMarking ? Colors.primary : "#f4f3f4"}
+                />
+              </View>
+
+              <View style={styles.switchRow}>
+                <View>
+                  <Text style={styles.switchLabel}>Published</Text>
+                  <Text style={styles.switchSubLabel}>Make quiz visible to students</Text>
+                </View>
+                <Switch
+                  value={isPublished}
+                  onValueChange={setIsPublished}
+                  trackColor={{ false: Colors.borderLight, true: Colors.primaryLight }}
+                  thumbColor={isPublished ? Colors.primary : "#f4f3f4"}
+                />
+              </View>
+
+              <Text style={styles.label}>Questions (JSON)</Text>
+              <Text style={styles.helperText}>
+                Paste a JSON array of questions. Format:{"\n"}
+                [{"{"}"text": "Q?", "options": ["A","B","C","D"], "correctAnswer": 0, "marks": 1{"}"}]
+              </Text>
+              <TextInput
+                style={[styles.input, styles.jsonInput]}
+                value={questionsJson}
+                onChangeText={setQuestionsJson}
+                placeholder='[{"text": "...", "options": [...], "correctAnswer": 0}]'
+                placeholderTextColor={Colors.textTertiary}
+                multiline
+                numberOfLines={6}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <Pressable
+                style={[styles.submitButton, createQuizMutation.isPending && styles.submitButtonDisabled]}
+                onPress={() => createQuizMutation.mutate()}
+                disabled={createQuizMutation.isPending}
+              >
+                {createQuizMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                    <Text style={styles.submitButtonText}>Create Quiz</Text>
+                  </>
+                )}
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -143,4 +372,134 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
   emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+    paddingHorizontal: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  modalScroll: {
+    flexGrow: 0,
+  },
+  label: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  multilineInput: {
+    minHeight: 70,
+    textAlignVertical: "top",
+  },
+  jsonInput: {
+    minHeight: 120,
+    textAlignVertical: "top",
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+  },
+  courseList: {
+    gap: 6,
+  },
+  courseOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  courseOptionText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  switchLabel: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  switchSubLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  helperText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textTertiary,
+    marginBottom: 8,
+    lineHeight: 17,
+  },
+  submitButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
 });

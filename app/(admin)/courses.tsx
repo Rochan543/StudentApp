@@ -30,6 +30,10 @@ export default function AdminCoursesScreen() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("0");
   const [isPublished, setIsPublished] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [brochureUrl, setBrochureUrl] = useState("");
+  const [duration, setDuration] = useState("");
+  const [instructorName, setInstructorName] = useState("");
 
   const { data: courses, isLoading, refetch } = useQuery({
     queryKey: ["admin-courses"],
@@ -51,6 +55,10 @@ export default function AdminCoursesScreen() {
     setDescription("");
     setPrice("0");
     setIsPublished(false);
+    setImageUrl("");
+    setBrochureUrl("");
+    setDuration("");
+    setInstructorName("");
   }
 
   async function handleDelete(id: number) {
@@ -135,6 +143,18 @@ export default function AdminCoursesScreen() {
               <Text style={styles.inputLabel}>Price ({"\u20B9"})</Text>
               <TextInput style={styles.modalInput} value={price} onChangeText={setPrice} placeholder="0" keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
 
+              <Text style={styles.inputLabel}>Duration (hours)</Text>
+              <TextInput style={styles.modalInput} value={duration} onChangeText={setDuration} placeholder="e.g. 40" keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
+
+              <Text style={styles.inputLabel}>Instructor Name</Text>
+              <TextInput style={styles.modalInput} value={instructorName} onChangeText={setInstructorName} placeholder="Instructor name" placeholderTextColor={Colors.textTertiary} />
+
+              <Text style={styles.inputLabel}>Image URL</Text>
+              <TextInput style={styles.modalInput} value={imageUrl} onChangeText={setImageUrl} placeholder="https://..." autoCapitalize="none" placeholderTextColor={Colors.textTertiary} />
+
+              <Text style={styles.inputLabel}>Brochure PDF URL</Text>
+              <TextInput style={styles.modalInput} value={brochureUrl} onChangeText={setBrochureUrl} placeholder="https://...pdf" autoCapitalize="none" placeholderTextColor={Colors.textTertiary} />
+
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Published</Text>
                 <Switch value={isPublished} onValueChange={setIsPublished} trackColor={{ true: Colors.primary }} />
@@ -142,7 +162,15 @@ export default function AdminCoursesScreen() {
 
               <Pressable
                 style={[styles.saveBtn, (!title || !description) && styles.saveBtnDisabled]}
-                onPress={() => createMutation.mutate({ title, description, price: parseFloat(price) || 0, isPublished })}
+                onPress={() => createMutation.mutate({
+                  title,
+                  description,
+                  price: parseFloat(price) || 0,
+                  isPublished,
+                  duration: duration ? parseInt(duration) : undefined,
+                  imageUrl: imageUrl || undefined,
+                  brochureUrl: brochureUrl || undefined,
+                })}
                 disabled={!title || !description || createMutation.isPending}
               >
                 {createMutation.isPending ? (

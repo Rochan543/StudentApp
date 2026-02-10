@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Pressable,
+  Linking,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,6 +35,20 @@ export default function GroupsScreen() {
     queryFn: () => apiGet<Group[]>("/api/groups"),
   });
 
+  function handleCall(groupName: string) {
+    Alert.alert("Start Call", `Start a voice call with ${groupName}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Call", onPress: () => Linking.openURL(`tel:`) },
+    ]);
+  }
+
+  function handleVideoCall(groupName: string) {
+    Alert.alert("Video Call", `Start a video call with ${groupName}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Start", onPress: () => Linking.openURL(`https://meet.google.com/new`) },
+    ]);
+  }
+
   const renderItem = ({ item }: { item: Group }) => {
     return (
       <Pressable
@@ -57,7 +73,23 @@ export default function GroupsScreen() {
               </Text>
             </View>
           </View>
-          <Ionicons name="chatbubble-outline" size={20} color={Colors.primary} />
+          <View style={styles.actionButtons}>
+            <Pressable
+              style={styles.callBtn}
+              onPress={(e) => { e.stopPropagation(); handleCall(item.name); }}
+              hitSlop={4}
+            >
+              <Ionicons name="call-outline" size={18} color={Colors.success} />
+            </Pressable>
+            <Pressable
+              style={styles.callBtn}
+              onPress={(e) => { e.stopPropagation(); handleVideoCall(item.name); }}
+              hitSlop={4}
+            >
+              <Ionicons name="videocam-outline" size={18} color={Colors.primary} />
+            </Pressable>
+            <Ionicons name="chatbubble-outline" size={18} color={Colors.primary} />
+          </View>
         </View>
       </Pressable>
     );
@@ -134,6 +166,8 @@ const styles = StyleSheet.create({
   cardDescription: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
   dateMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 },
   dateText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
+  actionButtons: { flexDirection: "row", alignItems: "center", gap: 10 },
+  callBtn: { padding: 4 },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
   emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary },

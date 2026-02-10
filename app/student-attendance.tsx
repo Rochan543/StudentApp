@@ -169,6 +169,7 @@ export default function StudentAttendanceScreen() {
                 last30.forEach((dateStr) => {
                   const isPresent = attendanceDates.has(dateStr);
                   const isToday = dateStr === todayStr;
+                  const isFuture = dateStr > todayStr;
                   const dayNum = new Date(dateStr).getDate();
                   const dayOfWeek = new Date(dateStr).getDay();
                   const isSunday = dayOfWeek === 0;
@@ -182,7 +183,9 @@ export default function StudentAttendanceScreen() {
                           ? styles.cellPresent
                           : isSunday
                           ? styles.cellHoliday
-                          : styles.cellAbsent,
+                          : isFuture || isToday
+                          ? styles.cellDefault
+                          : styles.cellDefault,
                         isToday && styles.cellToday,
                       ]}
                     >
@@ -208,8 +211,8 @@ export default function StudentAttendanceScreen() {
                 <Text style={styles.legendText}>Present</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: Colors.error + "30" }]} />
-                <Text style={styles.legendText}>Absent</Text>
+                <View style={[styles.legendDot, { backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border }]} />
+                <Text style={styles.legendText}>Not Marked</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: Colors.borderLight }]} />
@@ -302,6 +305,7 @@ const styles = StyleSheet.create({
   },
   cellPresent: { backgroundColor: Colors.success + "20", borderRadius: 8, margin: 1 },
   cellAbsent: { backgroundColor: Colors.error + "08", borderRadius: 8, margin: 1 },
+  cellDefault: { backgroundColor: Colors.background, borderRadius: 8, margin: 1 },
   cellHoliday: { backgroundColor: Colors.borderLight, borderRadius: 8, margin: 1 },
   cellToday: { borderWidth: 2, borderColor: Colors.primary },
   cellText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.text },
