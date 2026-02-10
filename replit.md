@@ -12,9 +12,9 @@ A comprehensive LMS mobile app built with Expo React Native (frontend) and Expre
 - **Auth**: JWT with access/refresh tokens
 
 ## Key Security Features
+- Single login screen for all users (admin and student)
+- Role-based routing: admin role from database determines dashboard access
 - Admin cannot register through public registration (student-only)
-- Admin login requires secret key via `/api/auth/secure-admin-auth`
-- Hidden admin login screen (tap logo 5 times on login screen)
 - Rate limiting on auth endpoints (10 attempts per 15 min)
 - Refresh token rotation for session management
 - Default admin seeded on startup: admin@learnhub.com / Admin@123
@@ -22,7 +22,6 @@ A comprehensive LMS mobile app built with Expo React Native (frontend) and Expre
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection
 - `SESSION_SECRET` - JWT signing secret
-- `ADMIN_SECRET_KEY` - Required for admin authentication (default: learnhub-admin-2024-secure)
 - `CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name
 - `CLOUDINARY_API_KEY` - Cloudinary API key
 - `CLOUDINARY_API_SECRET` - Cloudinary API secret
@@ -30,7 +29,7 @@ A comprehensive LMS mobile app built with Expo React Native (frontend) and Expre
 ## Project Structure
 ```
 app/                    # Expo Router screens
-  (auth)/               # Login, Register, Admin Login
+  (auth)/               # Login, Register
   (student)/            # Student tabs (dashboard, courses, leaderboard, profile)
   (admin)/              # Admin tabs (dashboard, courses, users, settings)
   course/[id].tsx       # Course detail
@@ -48,7 +47,7 @@ server/
 shared/
   schema.ts             # Drizzle schema (16 tables)
 lib/
-  auth-context.tsx      # Auth context with admin login + refresh tokens
+  auth-context.tsx      # Auth context with role-based routing + refresh tokens
   query-client.ts       # React Query setup with auth headers
   api.ts                # API helper functions with file upload
 constants/
@@ -59,11 +58,13 @@ constants/
 users, courses, modules, lessons, enrollments, assignments, submissions, quizzes, questions, quiz_attempts, coupons, meetings, attendance, groups, messages, notifications, leaderboard
 
 ## Recent Changes (Feb 2026)
+- Simplified auth: single login screen, role-based routing from database
+- Removed hidden admin login, secret key, and separate admin-login screen
+- Login API returns user role, frontend navigates directly to correct dashboard
 - Added Cloudinary file upload system for all file types
-- Implemented hidden admin login with secret key requirement
 - Added refresh token mechanism for session management
 - Rate limiting on login endpoints
-- Removed admin role from public registration
+- Admin cannot register (student-only registration)
 - Admin seeded on server startup
 - File upload UI on assignment submission screen
 - Updated CORS to allow Authorization header
