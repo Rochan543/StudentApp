@@ -1,0 +1,310 @@
+You are a senior full-stack architect and SaaS product engineer.
+
+Build a COMPLETE, PRODUCTION-READY Learning Management System (LMS) with:
+
+- Web Admin Panel
+- Student Web App
+- Guest Public Portal
+- Secure Authentication
+- Role-Based Access Control
+- Real-time Features
+- Scalable Database Design
+- API-first architecture
+- Cloud-ready deployment
+
+NO dummy data.
+NO static hardcoded content.
+ALL data must be created, managed, and controlled by Admin through Admin Panel.
+
+Tech Stack:
+Frontend: React / Next.js (App Router)
+Backend: Node.js + Express / NestJS
+Database: PostgreSQL 
+Auth: JWT + Refresh Tokens
+Realtime: WebSockets (Socket.io)
+Storage: Cloudinary / S3
+Payments: Stripe
+Meetings: Admin pastes external links (Zoom / Google Meet)
+Chat: Real-time one-to-one & group chat
+Deployment: Docker + CI/CD
+
+------------------------------------
+ROLES
+------------------------------------
+1. Admin
+2. Student (User)
+3. Guest
+
+------------------------------------
+AUTHENTICATION
+------------------------------------
+- Email + Password Register/Login
+- Forgot Password / Reset Password
+- Email Verification
+- Role-based routing
+- Secure hashed passwords
+- JWT access & refresh tokens
+
+------------------------------------
+GUEST PANEL (PUBLIC)
+------------------------------------
+- View courses list
+- View course syllabus outline
+- View instructors
+- View pricing
+- Cannot access content
+- CTA to register/login
+
+------------------------------------
+STUDENT PANEL
+------------------------------------
+Dashboard:
+- Profile details
+- Enrolled courses
+- Roadmap progress
+- Attendance %
+- Daily streak
+- Leaderboard rank
+- Upcoming sessions
+- Pending assignments
+- Notifications
+
+Profile:
+- Name, photo, email, phone
+- College / University
+- Group name
+- Resume upload
+- Skills
+- Progress metrics
+
+Courses:
+- Enroll only using coupon code
+- If coupon valid → payment becomes ₹0
+- Access full course content
+- Videos
+- Documents
+- Assignments
+- Quizzes
+- Exams
+- Roadmap steps
+
+Roadmap System:
+- Course → Modules → Lessons → Tasks
+- Clear next-step indicator
+- Lock/unlock based on completion
+
+Assignments:
+- Admin posts
+- Student uploads solution
+- Status: pending / submitted / reviewed
+- Marks & feedback
+
+Quizzes:
+- MCQ based
+- Timer
+- Auto grading
+
+Exams:
+- Timed
+- Randomized questions
+- Proctoring flag
+
+Daily Work Submission:
+- Text + file upload
+- Streak tracking
+
+Meetings:
+- Scheduled classes
+- Mock interviews
+- Live coding sessions
+- Join via admin-posted link
+
+Attendance:
+- Join button click logged
+- Manual override by admin
+
+Chat:
+- Student ↔ Admin real-time chat
+- Group chat
+
+Leaderboard:
+- Points from:
+  - Attendance
+  - Assignments
+  - Quiz score
+  - Exams
+  - Daily streak
+- Auto ranking
+
+Groups:
+- Admin assigns students to groups
+- Group discussions
+- Group announcements
+
+Notifications:
+- In-app
+- Email
+
+------------------------------------
+ADMIN PANEL
+------------------------------------
+Dashboard:
+- Total users
+- Active students
+- Courses
+- Revenue
+- Attendance stats
+
+User Management:
+- View users
+- Search
+- Filter
+- Assign group
+- Assign course
+- View full profile
+- View progress
+- Disable user
+
+Course Management:
+- Create course
+- Modules
+- Lessons
+- Upload videos/files
+- Roadmap builder
+
+Coupon Management:
+- Create coupon
+- Single-use or multi-use
+- Expiry date
+- Makes course price 0
+
+Assignments:
+- Create
+- Edit
+- Delete
+- Assign to:
+  - Course
+  - Group
+  - Individual user
+
+Quizzes / Exams:
+- Question bank
+- Timer
+- Negative marking option
+- Randomization
+
+Meetings:
+- Schedule
+- Paste link
+- Assign to course/group/user
+
+Mock Interviews:
+- Schedule
+- Assign interviewer
+- Feedback form
+
+Attendance:
+- View logs
+- Mark present/absent
+- Export CSV
+
+Chat:
+- Real-time chat with any user
+- Group chat
+
+Leaderboard Control:
+- View ranking
+- Manual adjustment
+
+Group Management:
+- Create group
+- Assign users
+- Group discussion board
+
+Reports:
+- Student progress
+- Course completion
+- Attendance
+- Performance
+
+------------------------------------
+DATABASE MODELS
+------------------------------------
+User
+Course
+Module
+Lesson
+Enrollment
+Assignment
+Submission
+Quiz
+Exam
+Question
+Answer
+Coupon
+Meeting
+Attendance
+Chat
+Message
+Group
+Notification
+Leaderboard
+
+------------------------------------
+SECURITY
+------------------------------------
+- SQL Injection protection
+- XSS protection
+- CSRF protection
+- Rate limiting
+- File validation
+- Role guards
+
+------------------------------------
+API REQUIREMENTS
+------------------------------------
+- RESTful APIs
+- Pagination
+- Filtering
+- Sorting
+- OpenAPI docs
+
+------------------------------------
+UX
+------------------------------------
+- Clean modern UI
+- Responsive
+- Dark mode
+- Loading skeletons
+- Toast notifications
+
+------------------------------------
+OUTPUT EXPECTATION
+------------------------------------
+Generate:
+
+1. System architecture diagram
+2. Database schema
+3. API endpoints list
+4. Backend code
+5. Frontend code
+6. Admin panel UI
+7. Student panel UI
+8. Auth system
+9. Docker setup
+10. Deployment guide
+
+Everything must be wired and functional.
+
+NO placeholder data.
+Admin controls everything.
+Production quality only.
+
+- AI Mentor Chatbot for students
+- Certificate generator (PDF)
+- Resume builder
+- Video streaming optimization
+- Mobile responsive PWA
+- Multi-language support
+
+
