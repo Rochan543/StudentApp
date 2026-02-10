@@ -26,6 +26,21 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [tapCount, setTapCount] = useState(0);
+  const tapTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleLogoTap() {
+    const newCount = tapCount + 1;
+    setTapCount(newCount);
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    if (newCount >= 5) {
+      setTapCount(0);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      router.push("/(auth)/admin-login");
+      return;
+    }
+    tapTimerRef.current = setTimeout(() => setTapCount(0), 2000);
+  }
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
@@ -64,13 +79,13 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.logoContainer}>
+        <Pressable style={styles.logoContainer} onPress={handleLogoTap} activeOpacity={1}>
           <View style={styles.iconCircle}>
             <Ionicons name="school" size={40} color="#fff" />
           </View>
           <Text style={styles.appName}>LearnHub</Text>
           <Text style={styles.subtitle}>Sign in to continue learning</Text>
-        </View>
+        </Pressable>
 
         {!!error && (
           <View style={styles.errorContainer}>

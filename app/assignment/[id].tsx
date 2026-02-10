@@ -9,14 +9,16 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiUpload } from "@/lib/api";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
+import * as DocumentPicker from "expo-document-picker";
 
 export default function AssignmentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +26,9 @@ export default function AssignmentScreen() {
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const [content, setContent] = useState("");
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: assignment, isLoading: assgnLoading } = useQuery({
     queryKey: ["assignment", id],
@@ -40,11 +45,52 @@ export default function AssignmentScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["submission", id] });
       setContent("");
+      setUploadedFileUrl(null);
+      setUploadedFileName(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Submitted", "Your assignment has been submitted successfully");
     },
     onError: (err: any) => Alert.alert("Error", err.message),
   });
+
+  async function handleFilePick() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "image/*"],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const file = result.assets[0];
+      setIsUploading(true);
+      const uploadResult = await apiUpload<{ url: string; publicId: string }>(
+        "/api/upload/submission",
+        file.uri,
+        file.name,
+        file.mimeType || "application/octet-stream"
+      );
+      setUploadedFileUrl(uploadResult.url);
+      setUploadedFileName(file.name);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      Alert.alert("Upload Failed", e.message || "Could not upload file");
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  function handleSubmit() {
+    if (!content.trim() && !uploadedFileUrl) {
+      Alert.alert("Error", "Please provide an answer or upload a file");
+      return;
+    }
+    submitMutation.mutate({
+      assignmentId: parseInt(id!),
+      content: content.trim(),
+      fileUrl: uploadedFileUrl,
+    });
+  }
 
   if (assgnLoading) {
     return (
@@ -99,6 +145,16 @@ export default function AssignmentScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Instructions</Text>
         <Text style={styles.instructions}>{assignment.description}</Text>
+        {assignment.fileUrl && (
+          <Pressable
+            style={styles.attachmentBtn}
+            onPress={() => Linking.openURL(assignment.fileUrl)}
+          >
+            <Ionicons name="document-attach" size={18} color={Colors.primary} />
+            <Text style={styles.attachmentText}>View Assignment File</Text>
+            <Ionicons name="open-outline" size={16} color={Colors.primary} />
+          </Pressable>
+        )}
       </View>
 
       {hasSubmission ? (
@@ -108,7 +164,19 @@ export default function AssignmentScreen() {
             <Text style={styles.submissionTitle}>Your Submission</Text>
           </View>
           <View style={styles.submissionCard}>
-            <Text style={styles.submissionContent}>{submission.content}</Text>
+            {submission.content && (
+              <Text style={styles.submissionContent}>{submission.content}</Text>
+            )}
+            {submission.fileUrl && (
+              <Pressable
+                style={styles.attachmentBtn}
+                onPress={() => Linking.openURL(submission.fileUrl)}
+              >
+                <Ionicons name="document-attach" size={18} color={Colors.primary} />
+                <Text style={styles.attachmentText}>View Uploaded File</Text>
+                <Ionicons name="open-outline" size={16} color={Colors.primary} />
+              </Pressable>
+            )}
             <View style={styles.submissionMeta}>
               <Text style={styles.submissionDate}>
                 Submitted: {new Date(submission.submittedAt || submission.createdAt).toLocaleString()}
@@ -146,10 +214,34 @@ export default function AssignmentScreen() {
             multiline
             textAlignVertical="top"
           />
+
+          <Pressable style={styles.uploadBtn} onPress={handleFilePick} disabled={isUploading}>
+            {isUploading ? (
+              <ActivityIndicator color={Colors.primary} size="small" />
+            ) : (
+              <>
+                <Ionicons name="cloud-upload-outline" size={22} color={Colors.primary} />
+                <Text style={styles.uploadBtnText}>
+                  {uploadedFileName || "Attach a file (PDF, DOC, Image)"}
+                </Text>
+              </>
+            )}
+          </Pressable>
+
+          {uploadedFileName && (
+            <View style={styles.fileIndicator}>
+              <Ionicons name="document" size={18} color={Colors.success} />
+              <Text style={styles.fileNameText} numberOfLines={1}>{uploadedFileName}</Text>
+              <Pressable onPress={() => { setUploadedFileUrl(null); setUploadedFileName(null); }}>
+                <Ionicons name="close-circle" size={20} color={Colors.textTertiary} />
+              </Pressable>
+            </View>
+          )}
+
           <Pressable
-            style={[styles.submitBtn, (!content.trim() || submitMutation.isPending) && styles.submitBtnDisabled]}
-            onPress={() => submitMutation.mutate({ assignmentId: parseInt(id!), content })}
-            disabled={!content.trim() || submitMutation.isPending}
+            style={[styles.submitBtn, ((!content.trim() && !uploadedFileUrl) || submitMutation.isPending) && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={(!content.trim() && !uploadedFileUrl) || submitMutation.isPending}
           >
             {submitMutation.isPending ? (
               <ActivityIndicator color="#fff" />
@@ -179,8 +271,24 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 10 },
   instructions: { fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.textSecondary, lineHeight: 24 },
+  attachmentBtn: {
+    flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EEF2FF",
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginTop: 12, alignSelf: "flex-start",
+  },
+  attachmentText: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.primary },
   submitSection: { marginBottom: 20 },
-  answerInput: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.text, height: 180, borderWidth: 1, borderColor: Colors.border, marginBottom: 16 },
+  answerInput: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.text, height: 140, borderWidth: 1, borderColor: Colors.border, marginBottom: 12 },
+  uploadBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    backgroundColor: Colors.surface, borderRadius: 14, paddingVertical: 14,
+    borderWidth: 1.5, borderColor: Colors.primary, borderStyle: "dashed" as const, marginBottom: 8,
+  },
+  uploadBtnText: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.primary },
+  fileIndicator: {
+    flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#ECFDF5",
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginBottom: 12,
+  },
+  fileNameText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.text, flex: 1 },
   submitBtn: { flexDirection: "row", backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, justifyContent: "center", alignItems: "center", gap: 8 },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },

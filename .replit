@@ -68,3 +68,8 @@ task = "shell.exec"
 args = "npm run expo:dev"
 waitForPort = 8081
 ensurePreviewReachable = "/status"
+
+[userenv]
+
+[userenv.shared]
+ADMIN_SECRET_KEY = "learnhub-admin-2024-secure"

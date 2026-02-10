@@ -53,8 +53,10 @@ export const lessons = pgTable("lessons", {
   moduleId: integer("module_id").notNull(),
   title: text("title").notNull(),
   content: text("content"),
+  contentType: text("content_type").default("text"),
   videoUrl: text("video_url"),
   documentUrl: text("document_url"),
+  duration: integer("duration"),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -73,6 +75,7 @@ export const assignments = pgTable("assignments", {
   courseId: integer("course_id").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  fileUrl: text("file_url"),
   dueDate: timestamp("due_date"),
   maxMarks: integer("max_marks").notNull().default(100),
   createdBy: integer("created_by").notNull(),
@@ -221,7 +224,13 @@ export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().min(2),
-  role: z.enum(["student", "admin"]).optional().default("student"),
+  role: z.literal("student").optional().default("student"),
+});
+
+export const adminLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  adminKey: z.string().min(1),
 });
 
 export const insertCourseSchema = createInsertSchema(courses).pick({

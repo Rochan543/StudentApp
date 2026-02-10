@@ -1,0 +1,90 @@
+You are a senior full-stack engineer.
+
+Implement the following STRICT REQUIREMENTS in an LMS system:
+
+1. HIDDEN ADMIN LOGIN
+--------------------------------
+- There must be NO visible Admin login button anywhere in the UI.
+- Admin login route must be hidden (example: /secure-admin-auth).
+- Admin users can only be created by:
+    - Database seeding
+    - Or a protected SuperAdmin API.
+- On login, fetch user role from backend.
+- Role-based redirect:
+    - role === "ADMIN" → /admin/dashboard
+    - role === "STUDENT" → /student/dashboard
+- Enforce backend role guards on all admin APIs.
+- Prevent students from accessing admin routes even via URL manipulation.
+
+2. ROLE-BASED AUTHENTICATION
+--------------------------------
+- Single login API for all users.
+- JWT Access + Refresh Tokens.
+- Password hashing (bcrypt).
+- Middleware must validate:
+    - Authentication
+    - Authorization (role)
+- Admin permissions must be server-side enforced (not frontend only).
+
+3. CLOUDINARY STORAGE (MANDATORY)
+--------------------------------
+Use Cloudinary for ALL file storage.
+NO local disk storage.
+
+Cloudinary folders:
+- lms/course-images → course thumbnails & banners
+- lms/course-pdfs → syllabus & learning PDFs
+- lms/assignments → admin-posted task files
+- lms/submissions → student assignment uploads
+
+Database must store ONLY Cloudinary URLs.
+
+4. COURSE IMAGE HANDLING
+--------------------------------
+- Admin uploads course images.
+- Images must be stored in Cloudinary.
+- Image URL saved in database.
+- Optimized image delivery (auto format, auto quality).
+
+5. PDF & TASK STORAGE
+--------------------------------
+- Admin uploads PDFs for:
+    - Courses
+    - Assignments
+    - Tasks
+- Files uploaded directly to Cloudinary.
+- Secure file validation (type & size).
+- Student downloads use Cloudinary URLs.
+
+6. ASSIGNMENT SUBMISSION STORAGE
+--------------------------------
+- Student uploads assignment solutions.
+- Files stored in Cloudinary.
+- Each submission linked to:
+    - Student ID
+    - Assignment ID
+    - Course ID
+- Submission status tracked in database.
+
+7. SECURITY REQUIREMENTS
+--------------------------------
+- Block direct access to admin routes without ADMIN role.
+- CSRF protection.
+- Rate limiting on login.
+- File type validation.
+- Secure environment variables for Cloudinary keys.
+
+8. IMPLEMENTATION OUTPUT
+--------------------------------
+Generate:
+- Backend auth middleware
+- Role guard logic
+- Cloudinary upload service
+- Secure admin routing
+- Database fields for file URLs
+- End-to-end working integration
+
+NO dummy data.
+NO hardcoded content.
+ADMIN controls all uploads.
+Production-ready code only.

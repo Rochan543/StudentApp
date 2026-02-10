@@ -1,12 +1,45 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
 import { storage } from "./storage";
-import { hashPassword, comparePassword, generateToken, authMiddleware, adminMiddleware } from "./auth";
-import { registerSchema, loginSchema } from "@shared/schema";
+import { hashPassword, comparePassword, generateTokens, generateToken, verifyToken, authMiddleware, adminMiddleware } from "./auth";
+import { registerSchema, loginSchema, adminLoginSchema } from "@shared/schema";
 import { Server as SocketServer } from "socket.io";
+import rateLimit from "express-rate-limit";
+import { uploadImage, uploadDocument, uploadAny, uploadToCloudinary, type CloudinaryFolder } from "./cloudinary";
+
+const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || "learnhub-admin-2024-secure";
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many login attempts, please try again after 15 minutes" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+async function seedAdminUser() {
+  try {
+    const adminEmail = "admin@learnhub.com";
+    const existing = await storage.getUserByEmail(adminEmail);
+    if (!existing) {
+      const hashedPassword = await hashPassword("Admin@123");
+      await storage.createUser({
+        email: adminEmail,
+        password: hashedPassword,
+        name: "System Admin",
+        role: "admin",
+      });
+      console.log("Default admin user seeded: admin@learnhub.com / Admin@123");
+    }
+  } catch (e) {
+    console.error("Failed to seed admin:", e);
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+
+  await seedAdminUser();
 
   const io = new SocketServer(httpServer, {
     cors: { origin: "*", methods: ["GET", "POST"] },
@@ -29,28 +62,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.post("/api/auth/register", async (req: Request, res: Response) => {
+  app.post("/api/auth/register", loginLimiter, async (req: Request, res: Response) => {
     try {
       const parsed = registerSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: parsed.error.errors[0].message });
       }
-      const { email, password, name, role } = parsed.data;
+      const { email, password, name } = parsed.data;
       const existing = await storage.getUserByEmail(email);
       if (existing) {
         return res.status(400).json({ message: "Email already registered" });
       }
       const hashedPassword = await hashPassword(password);
-      const user = await storage.createUser({ email, password: hashedPassword, name, role });
-      const token = generateToken(user.id, user.role);
+      const user = await storage.createUser({ email, password: hashedPassword, name, role: "student" });
+      const tokens = generateTokens(user.id, user.role);
       const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword, token });
+      res.json({ user: userWithoutPassword, token: tokens.accessToken, refreshToken: tokens.refreshToken });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
   });
 
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  app.post("/api/auth/login", loginLimiter, async (req: Request, res: Response) => {
     try {
       const parsed = loginSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -68,9 +101,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!valid) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      const token = generateToken(user.id, user.role);
+      if (user.role === "admin") {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      const tokens = generateTokens(user.id, user.role);
       const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword, token });
+      res.json({ user: userWithoutPassword, token: tokens.accessToken, refreshToken: tokens.refreshToken });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/auth/secure-admin-auth", loginLimiter, async (req: Request, res: Response) => {
+    try {
+      const parsed = adminLoginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request" });
+      }
+      const { email, password, adminKey } = parsed.data;
+      if (adminKey !== ADMIN_SECRET_KEY) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      if (user.role !== "admin") {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      if (!user.isActive) {
+        return res.status(403).json({ message: "Account disabled" });
+      }
+      const valid = await comparePassword(password, user.password);
+      if (!valid) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      const tokens = generateTokens(user.id, user.role);
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword, token: tokens.accessToken, refreshToken: tokens.refreshToken });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/auth/refresh", async (req: Request, res: Response) => {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return res.status(400).json({ message: "Refresh token required" });
+      }
+      const decoded = verifyToken(refreshToken);
+      if (!decoded || decoded.type !== "refresh") {
+        return res.status(401).json({ message: "Invalid refresh token" });
+      }
+      const user = await storage.getUserById(decoded.userId);
+      if (!user || !user.isActive) {
+        return res.status(401).json({ message: "User not found or disabled" });
+      }
+      const tokens = generateTokens(user.id, user.role);
+      res.json({ token: tokens.accessToken, refreshToken: tokens.refreshToken });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -94,6 +183,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) return res.status(404).json({ message: "User not found" });
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/upload/course-image", authMiddleware, adminMiddleware, uploadImage.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const result = await uploadToCloudinary(req.file.buffer, "lms/course-images", { resourceType: "image" });
+      res.json({ url: result.url, publicId: result.publicId });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/upload/course-pdf", authMiddleware, adminMiddleware, uploadDocument.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const result = await uploadToCloudinary(req.file.buffer, "lms/course-pdfs", { resourceType: "raw" });
+      res.json({ url: result.url, publicId: result.publicId });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/upload/assignment", authMiddleware, adminMiddleware, uploadAny.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const result = await uploadToCloudinary(req.file.buffer, "lms/assignments", { resourceType: "raw" });
+      res.json({ url: result.url, publicId: result.publicId });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/upload/submission", authMiddleware, uploadAny.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const result = await uploadToCloudinary(req.file.buffer, "lms/submissions", { resourceType: "raw" });
+      res.json({ url: result.url, publicId: result.publicId });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
