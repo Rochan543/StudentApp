@@ -24,6 +24,18 @@ function RootLayoutNav() {
       <Stack.Screen name="assignment/[id]" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="chat/[id]" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="notifications" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-coupons" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-banners" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-assignments" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-quizzes" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-meetings" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-groups" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-reports" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="meetings" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="assignments-list" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="quizzes-list" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="chat-list" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="groups" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
