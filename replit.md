@@ -112,3 +112,11 @@ users, courses, modules, lessons, enrollments, assignments, submissions, quizzes
 - Cloudinary file upload system for all file types
 - Refresh token mechanism for session management
 - Rate limiting on login endpoints
+- Fixed leave request API to return flat data structure (not nested)
+- Fixed 40+ TypeScript LSP errors with paramId() helper for route params
+- Added group call notification system (POST /api/groups/:id/call)
+- Added JSON file upload for quiz bulk questions (admin-quizzes)
+- Added file attachment upload for assignment creation (admin-assignments)
+- Admin roadmap detail refetches fresh data after unlock/complete actions
+- Chat messages ordered DESC for inverted FlatList compatibility
+- Groups API includes memberCount in response
