@@ -1,0 +1,102 @@
+You are a senior backend + frontend engineer.
+
+There is an existing authentication system where:
+- Login and register work
+- Router.replace("/") is called after successful auth
+- Index screen checks user role and redirects
+- Admin login is hidden (revealed by tapping logo 5 times)
+- Admin credentials already exist in database
+
+CURRENT BUG:
+When logging in with ADMIN credentials, the app always redirects to the STUDENT (user) dashboard instead of the ADMIN dashboard.
+
+---------------------------------------------------
+REQUIREMENTS TO FIX
+---------------------------------------------------
+
+1. ROLE SOURCE OF TRUTH (CRITICAL)
+--------------------------------
+- The user's role MUST come ONLY from the backend database.
+- Never infer role from:
+  - Email
+  - UI state
+  - Login screen type
+- Ensure the database field `role` (e.g., "ADMIN", "STUDENT") is returned in the login response.
+
+2. BACKEND LOGIN RESPONSE
+--------------------------------
+- On successful login, return:
+  - user.id
+  - user.email
+  - user.role   ← mandatory
+  - accessToken
+- Ensure ADMIN users have role="ADMIN" in database (case-sensitive).
+
+3. FRONTEND AUTH STATE
+--------------------------------
+- Persist authenticated user object including `role`.
+- Do NOT default role to "STUDENT".
+- Ensure role is stored before navigation happens.
+
+4. INDEX ROUTE REDIRECTION LOGIC
+--------------------------------
+Fix the index ("/") redirect logic:
+
+- Wait until auth state is fully loaded.
+- Then:
+    if (user.role === "ADMIN") {
+        redirect to /admin/dashboard
+    } else if (user.role === "STUDENT") {
+        redirect to /student/dashboard
+    }
+
+- Do NOT rely on:
+    - login screen type
+    - admin-login flag
+    - secret key presence
+
+5. HIDDEN ADMIN LOGIN BEHAVIOR
+--------------------------------
+- Hidden admin login ONLY unlocks the admin login UI.
+- It must NOT decide routing.
+- Routing decision must be 100% role-based from backend.
+
+6. DATABASE VALIDATION
+--------------------------------
+- Verify the admin user record:
+    role = "ADMIN"
+- Ensure no fallback logic overwrites role to "STUDENT".
+
+7. DEBUGGING REQUIREMENT
+--------------------------------
+- Add temporary logs:
+    - Backend: log role being returned on login
+    - Frontend: log user.role before redirect
+- Remove logs after fix is verified.
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+
+- Logging in with ADMIN credentials always opens Admin Dashboard.
+- Logging in with STUDENT credentials always opens Student Dashboard.
+- Hidden admin login remains hidden but routing is correct.
+- No UI-based role assumptions.
+- Role-based routing works 100% reliably.
+
+Do NOT add new features.
+Do NOT change UI.
+Fix role handling and routing only.
+
+---------------------------------------------------
+ADDITIONAL CLOUDINARY REQUIREMENT
+---------------------------------------------------
+
+- Cloudinary must be used for storing:
+    - Course images
+    - Course videos
+    - Course PDFs
+- Files must upload directly to Cloudinary.
+- Backend stores ONLY Cloudinary secure URLs.
+- No file should be stored on local disk.
+- Upload logic must not affect authentication or routing logic.

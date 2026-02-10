@@ -21,9 +21,9 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  adminLogin: (email: string, password: string, adminKey: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  adminLogin: (email: string, password: string, adminKey: string) => Promise<User>;
+  register: (email: string, password: string, name: string) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string): Promise<User> {
     const baseUrl = getApiUrl();
     const res = await fetch(new URL("/api/auth/login", baseUrl).toString(), {
       method: "POST",
@@ -125,9 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(data.message || "Login failed");
     await saveTokens(data.token, data.refreshToken);
     setUser(data.user);
+    return data.user;
   }
 
-  async function adminLogin(email: string, password: string, adminKey: string) {
+  async function adminLogin(email: string, password: string, adminKey: string): Promise<User> {
     const baseUrl = getApiUrl();
     const res = await fetch(new URL("/api/auth/secure-admin-auth", baseUrl).toString(), {
       method: "POST",
@@ -138,9 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(data.message || "Login failed");
     await saveTokens(data.token, data.refreshToken);
     setUser(data.user);
+    return data.user;
   }
 
-  async function register(email: string, password: string, name: string) {
+  async function register(email: string, password: string, name: string): Promise<User> {
     const baseUrl = getApiUrl();
     const res = await fetch(new URL("/api/auth/register", baseUrl).toString(), {
       method: "POST",
@@ -151,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(data.message || "Registration failed");
     await saveTokens(data.token, data.refreshToken);
     setUser(data.user);
+    return data.user;
   }
 
   async function logout() {
