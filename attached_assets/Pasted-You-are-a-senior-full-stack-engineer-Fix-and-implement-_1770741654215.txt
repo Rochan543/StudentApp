@@ -1,0 +1,109 @@
+You are a senior full-stack engineer.
+
+Fix and implement the following issues exactly as described.
+
+---------------------------------------------------
+1. MEETING SCHEDULING
+---------------------------------------------------
+Meeting scheduling must have:
+
+- Calendar for selecting date.
+- Timer / time picker for selecting time.
+- Admin must be able to schedule meeting using calendar & timer.
+
+---------------------------------------------------
+2. ASSIGNMENTS & QUIZZES CREATION
+---------------------------------------------------
+Currently there is no option for admin to create assignments and quizzes.
+
+Fix:
+
+- Admin must have option to create assignments.
+- Admin must have option to create quizzes.
+
+Bulk Question Upload:
+
+- At top, provide upload option for bulk questions.
+- System must extract:
+  - Questions
+  - Options
+- Admin must select / provide correct option after extraction.
+
+---------------------------------------------------
+3. ROADMAP CREATION ERROR
+---------------------------------------------------
+When admin is creating roadmap, it shows “something went wrong”.
+
+Fix:
+
+- Roadmap must be created successfully.
+- No error should occur.
+- Roadmap must save and reflect correctly.
+
+---------------------------------------------------
+4. ADMIN GROUP MEMBER MANAGEMENT
+---------------------------------------------------
+Admin has created group and added two members.
+
+Fix:
+
+- Admin must see added members.
+- Admin must have option to remove members.
+
+---------------------------------------------------
+5. GROUP USER PANEL CALL OPTIONS
+---------------------------------------------------
+In groups user panel:
+
+- User can see Create Group.
+- User can see Call and Video Call buttons.
+- Those buttons are in reserve / disabled.
+
+Fix:
+
+- Enable Call option.
+- Enable Video Call option.
+
+---------------------------------------------------
+6. COURSE CLICK ERROR
+---------------------------------------------------
+When clicking on course, it shows “something error”.
+
+Fix:
+
+- Course must open correctly.
+
+---------------------------------------------------
+7. ADMIN COURSE UPLOAD OPTIONS
+---------------------------------------------------
+In admin panel course creation, missing options.
+
+Fix:
+
+- Add course image upload option.
+- Add course broucher PDF upload option.
+- Add course content upload option.
+- Add instructor name field.
+- Use Cloudinary for:
+  - Images
+  - PDFs
+
+---------------------------------------------------
+8. USER PANEL ATTENDANCE BLOCKING
+---------------------------------------------------
+In user panel some dates are blocked.
+
+Fix:
+
+- Do NOT block dates by default.
+- If user does not mark attendance, then block that date.
+- Dates must remain open unless user action.
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+All above points must work correctly.
+
+Fix ONLY these items.
+Do NOT add new features.
+Do NOT redesign UI.

@@ -1074,8 +1074,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/roadmaps", authMiddleware, adminMiddleware, async (_req: Request, res: Response) => {
     try {
-      const roadmaps = await storage.getAllRoadmaps();
-      res.json(roadmaps);
+      const rawRoadmaps = await storage.getAllRoadmaps();
+      const roadmapsWithItems = await Promise.all(
+        rawRoadmaps.map(async (r: any) => {
+          const items = await storage.getRoadmapItems(r.roadmap.id);
+          const flatItems = items.map((i: any) => ({
+            id: i.roadmapItem.id,
+            roadmapId: i.roadmapItem.roadmapId,
+            courseId: i.roadmapItem.courseId,
+            orderIndex: i.roadmapItem.orderIndex,
+            isUnlocked: i.roadmapItem.isUnlocked,
+            isCompleted: i.roadmapItem.isCompleted,
+            unlockedAt: i.roadmapItem.unlockedAt,
+            completedAt: i.roadmapItem.completedAt,
+            course: i.course,
+          }));
+          return {
+            id: r.roadmap.id,
+            userId: r.roadmap.userId,
+            createdBy: r.roadmap.createdBy,
+            createdAt: r.roadmap.createdAt,
+            user: r.user,
+            items: flatItems,
+          };
+        })
+      );
+      res.json(roadmapsWithItems);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -1085,7 +1109,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const roadmap = await storage.getRoadmapByUser(req.user!.userId);
       if (!roadmap) return res.json(null);
-      const items = await storage.getRoadmapItems(roadmap.id);
+      const rawItems = await storage.getRoadmapItems(roadmap.id);
+      const items = rawItems.map((i: any) => ({
+        id: i.roadmapItem.id,
+        roadmapId: i.roadmapItem.roadmapId,
+        courseId: i.roadmapItem.courseId,
+        orderIndex: i.roadmapItem.orderIndex,
+        isUnlocked: i.roadmapItem.isUnlocked,
+        isCompleted: i.roadmapItem.isCompleted,
+        unlockedAt: i.roadmapItem.unlockedAt,
+        completedAt: i.roadmapItem.completedAt,
+        course: i.course,
+      }));
       res.json({ ...roadmap, items });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
