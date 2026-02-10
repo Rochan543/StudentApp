@@ -1,0 +1,135 @@
+You are a senior backend engineer.
+
+Implement Cloudinary file storage in a Node.js backend.
+
+Use the following environment variables:
+
+CLOUDINARY_CLOUD_NAME
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
+
+---------------------------------------------------
+REQUIREMENTS
+---------------------------------------------------
+
+1. ENV CONFIGURATION
+--------------------------------
+- Load Cloudinary credentials from environment variables.
+- Do NOT hardcode keys anywhere.
+- Use dotenv.
+
+2. CLOUDINARY SETUP
+--------------------------------
+- Configure Cloudinary SDK once in a central config file.
+- Export initialized Cloudinary instance.
+
+3. FILE UPLOAD SERVICE
+--------------------------------
+Create a reusable upload service that:
+
+- Accepts file buffer or file path.
+- Uploads to Cloudinary.
+- Returns:
+    - secure_url
+    - public_id
+- Supports folder parameter.
+
+4. FOLDER STRUCTURE
+--------------------------------
+Use these folders:
+
+lms/course-images
+lms/course-pdfs
+lms/assignments
+lms/submissions
+
+5. DATABASE STORAGE RULE
+--------------------------------
+- Store ONLY Cloudinary secure_url in database.
+- Never store files locally.
+
+6. FILE VALIDATION
+--------------------------------
+Before upload:
+
+- Allow images: jpg, jpeg, png, webp
+- Allow documents: pdf
+- Max size: 10MB
+- Reject anything else.
+
+7. DELETE SUPPORT
+--------------------------------
+- Implement function to delete file using public_id.
+
+8. API INTEGRATION
+--------------------------------
+Create example endpoints:
+
+POST /upload/course-image
+POST /upload/course-pdf
+POST /upload/assignment
+POST /upload/submission
+
+Each endpoint:
+- Receives multipart file
+- Uploads to Cloudinary
+- Returns Cloudinary URL
+
+9. SECURITY
+--------------------------------
+- Protect upload routes with authentication middleware.
+- Validate file type & size server-side.
+
+---------------------------------------------------
+OUTPUT
+---------------------------------------------------
+
+Generate:
+
+- cloudinary.config.js
+- upload.service.js
+- upload.controller.js
+- multer configuration
+- Sample API routes
+- Example usage in controller
+
+Everything must be production-ready.
+No placeholders.
+No local storage.
+
+---------------------------------------------------
+ADDITIONAL REQUIREMENTS (DO NOT REMOVE ANY ABOVE)
+---------------------------------------------------
+
+10. ENV FILE CREATION
+--------------------------------
+- Create a root-level .env file.
+- Load it using dotenv.
+- Place all Cloudinary credentials inside this .env file.
+- Application must fail gracefully if env variables are missing.
+
+11. SIGN-IN / SIGN-UP FIX
+--------------------------------
+- Implement POST /auth/register
+- Implement POST /auth/login
+- Hash password using bcrypt before storing.
+- Compare hashed password during login.
+- Return proper error messages:
+    - User not found
+    - Invalid credentials
+    - Email already exists
+- Fix any bug that prevents users from signing in or creating account.
+- Authentication must work end-to-end.
+
+12. AUTH MIDDLEWARE
+--------------------------------
+- Create JWT authentication middleware.
+- Protect upload routes using this middleware.
+
+---------------------------------------------------
+FINAL NOTE
+---------------------------------------------------
+Do NOT modify any existing lines.
+Only implement the additions.
+System must be fully functional.
+Production-ready only.
