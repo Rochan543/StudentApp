@@ -2,12 +2,10 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
 import { storage } from "./storage";
 import { hashPassword, comparePassword, generateTokens, generateToken, verifyToken, authMiddleware, adminMiddleware } from "./auth";
-import { registerSchema, loginSchema, adminLoginSchema } from "@shared/schema";
+import { registerSchema, loginSchema } from "@shared/schema";
 import { Server as SocketServer } from "socket.io";
 import rateLimit from "express-rate-limit";
 import { uploadImage, uploadDocument, uploadAny, uploadToCloudinary, type CloudinaryFolder } from "./cloudinary";
-
-const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || "learnhub-admin-2024-secure";
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -92,41 +90,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = parsed.data;
       const user = await storage.getUserByEmail(email);
       if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-      if (!user.isActive) {
-        return res.status(403).json({ message: "Account disabled" });
-      }
-      const valid = await comparePassword(password, user.password);
-      if (!valid) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-      if (user.role === "admin") {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-      const tokens = generateTokens(user.id, user.role);
-      const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword, token: tokens.accessToken, refreshToken: tokens.refreshToken });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.post("/api/auth/secure-admin-auth", loginLimiter, async (req: Request, res: Response) => {
-    try {
-      const parsed = adminLoginSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid request" });
-      }
-      const { email, password, adminKey } = parsed.data;
-      if (adminKey !== ADMIN_SECRET_KEY) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-      if (user.role !== "admin") {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       if (!user.isActive) {

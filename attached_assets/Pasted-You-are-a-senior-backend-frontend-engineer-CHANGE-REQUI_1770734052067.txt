@@ -1,0 +1,75 @@
+You are a senior backend + frontend engineer.
+
+CHANGE REQUIRED (STRICT):
+
+- REMOVE the hidden admin login mechanism completely.
+- REMOVE logo-tap logic.
+- REMOVE secret key requirement.
+- REMOVE separate admin-login screen.
+
+---------------------------------------------------
+NEW AUTH RULE (ROLE-ONLY)
+---------------------------------------------------
+
+1. SINGLE LOGIN FLOW
+--------------------------------
+- There must be ONLY ONE login screen.
+- Users (admin or student) log in using:
+    - email
+    - password
+
+2. ROLE-BASED ADMIN ACCESS
+--------------------------------
+- Admin access is decided ONLY by the database field `role`.
+- If user.role === "ADMIN":
+    → redirect to /admin/dashboard
+- If user.role === "STUDENT":
+    → redirect to /student/dashboard
+
+3. BACKEND REQUIREMENT
+--------------------------------
+- Login API must return:
+    - user.id
+    - user.email
+    - user.role
+    - accessToken
+- Role must be fetched from database.
+- Do NOT infer role from UI, email, or any client logic.
+
+4. FRONTEND ROUTING
+--------------------------------
+- After successful login, call router.replace("/")
+- Index route MUST:
+    - wait for auth state
+    - read user.role
+    - redirect accordingly
+- No conditional checks for admin-login or secret keys.
+
+5. DATABASE RULE
+--------------------------------
+- Exactly ONE or more users can have role="ADMIN".
+- Logging in with that user MUST open Admin Dashboard.
+
+6. CLEANUP
+--------------------------------
+- Delete all code related to:
+    - hidden admin login
+    - secret keys
+    - admin-login flags
+    - logo tap detection
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+
+- Admin logs in via normal login form.
+- Admin always lands on Admin Dashboard.
+- Students always land on Student Dashboard.
+- Role-based routing is the ONLY control.
+- No hidden logic.
+- No secret keys.
+- No UI-based assumptions.
+
+Fix ONLY this behavior.
+Do NOT add new features.
+Do NOT modify UI design.

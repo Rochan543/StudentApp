@@ -22,7 +22,6 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<User>;
-  adminLogin: (email: string, password: string, adminKey: string) => Promise<User>;
   register: (email: string, password: string, name: string) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -128,20 +127,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user;
   }
 
-  async function adminLogin(email: string, password: string, adminKey: string): Promise<User> {
-    const baseUrl = getApiUrl();
-    const res = await fetch(new URL("/api/auth/secure-admin-auth", baseUrl).toString(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, adminKey }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login failed");
-    await saveTokens(data.token, data.refreshToken);
-    setUser(data.user);
-    return data.user;
-  }
-
   async function register(email: string, password: string, name: string): Promise<User> {
     const baseUrl = getApiUrl();
     const res = await fetch(new URL("/api/auth/register", baseUrl).toString(), {
@@ -187,7 +172,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
     login,
-    adminLogin,
     register,
     logout,
     refreshUser,
