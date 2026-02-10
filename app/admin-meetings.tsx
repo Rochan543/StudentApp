@@ -194,11 +194,11 @@ export default function AdminMeetingsScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12 }]}>
-        <Pressable testID="back-button" onPress={() => router.back()}>
+        <Pressable testID="back-button" onPress={() => router.back()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Meetings</Text>
-        <Pressable testID="add-button" onPress={() => setShowCreateModal(true)}>
+        <Pressable testID="add-meeting-button" onPress={() => setShowCreateModal(true)} style={{ padding: 8 }}>
           <Ionicons name="add-circle" size={26} color={Colors.primary} />
         </Pressable>
       </View>

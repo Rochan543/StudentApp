@@ -768,7 +768,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/meetings", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const meeting = await storage.createMeeting({ ...req.body, createdBy: req.user!.userId });
+      const { scheduledAt, ...rest } = req.body;
+      const parsedDate = scheduledAt ? new Date(scheduledAt) : new Date(Date.now() + 86400000);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      const meeting = await storage.createMeeting({ ...rest, scheduledAt: parsedDate, createdBy: req.user!.userId });
       res.json(meeting);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -1129,7 +1134,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const search = req.query.search as string | undefined;
       const users = await storage.getUsers(search);
-      res.json(users);
+      const safeUsers = users.map(({ password, ...rest }: any) => rest);
+      res.json(safeUsers);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
