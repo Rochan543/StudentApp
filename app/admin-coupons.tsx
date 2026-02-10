@@ -120,11 +120,11 @@ export default function AdminCouponsScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12 }]}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable testID="back-button" onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </Pressable>
         <Text style={styles.title}>Coupon Management</Text>
-        <Pressable onPress={() => setShowCreateModal(true)}>
+        <Pressable testID="add-button" onPress={() => setShowCreateModal(true)}>
           <Ionicons name="add-circle" size={26} color={Colors.primary} />
         </Pressable>
       </View>

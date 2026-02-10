@@ -74,7 +74,7 @@ export default function AdminQuizzesScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12 }]}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable testID="back-button" onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>All Quizzes</Text>

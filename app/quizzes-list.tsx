@@ -102,7 +102,7 @@ export default function QuizzesListScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
+        <Pressable testID="back-button" onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Quizzes</Text>
