@@ -23,9 +23,8 @@ interface QuizItem {
     title: string;
     description: string;
     timeLimit: number;
-    maxAttempts: number;
-    passingScore: number;
-    isActive: boolean;
+    negativeMarking: boolean;
+    isPublished: boolean;
     createdAt: string;
   };
   course: {
@@ -44,7 +43,7 @@ export default function QuizzesListScreen() {
   });
 
   const renderItem = ({ item }: { item: QuizItem }) => {
-    const isActive = item.quiz.isActive;
+    const isActive = item.quiz.isPublished;
 
     return (
       <Pressable
@@ -79,16 +78,10 @@ export default function QuizzesListScreen() {
                   <Text style={styles.metaText}>{item.quiz.timeLimit} min</Text>
                 </View>
               )}
-              {item.quiz.passingScore > 0 && (
+              {item.quiz.negativeMarking && (
                 <View style={styles.metaItem}>
-                  <Ionicons name="checkmark-circle-outline" size={13} color={Colors.textSecondary} />
-                  <Text style={styles.metaText}>Pass: {item.quiz.passingScore}%</Text>
-                </View>
-              )}
-              {item.quiz.maxAttempts > 0 && (
-                <View style={styles.metaItem}>
-                  <Ionicons name="repeat-outline" size={13} color={Colors.textSecondary} />
-                  <Text style={styles.metaText}>{item.quiz.maxAttempts} attempts</Text>
+                  <Ionicons name="remove-circle-outline" size={13} color={Colors.textSecondary} />
+                  <Text style={styles.metaText}>Neg. marking</Text>
                 </View>
               )}
             </View>

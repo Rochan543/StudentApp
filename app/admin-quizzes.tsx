@@ -156,9 +156,9 @@ export default function AdminQuizzesScreen() {
             <Text style={styles.quizTitle}>{item.quiz.title}</Text>
             <Text style={styles.courseName}>{item.course?.title || "Unknown Course"}</Text>
           </View>
-          <View style={[styles.statusBadge, item.quiz.isActive ? styles.activeBadge : styles.inactiveBadge]}>
-            <Text style={[styles.statusText, item.quiz.isActive ? styles.activeText : styles.inactiveText]}>
-              {item.quiz.isActive ? "Active" : "Inactive"}
+          <View style={[styles.statusBadge, item.quiz.isPublished ? styles.activeBadge : styles.inactiveBadge]}>
+            <Text style={[styles.statusText, item.quiz.isPublished ? styles.activeText : styles.inactiveText]}>
+              {item.quiz.isPublished ? "Published" : "Draft"}
             </Text>
           </View>
         </View>
@@ -173,12 +173,12 @@ export default function AdminQuizzesScreen() {
             <Text style={styles.statText}>{formatTime(item.quiz.timeLimit)}</Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="repeat-outline" size={14} color={Colors.textSecondary} />
-            <Text style={styles.statText}>{item.quiz.maxAttempts || "Unlimited"} attempts</Text>
+            <Ionicons name="remove-circle-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.statText}>{item.quiz.negativeMarking ? "Neg. marking" : "No penalty"}</Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="checkmark-circle-outline" size={14} color={Colors.textSecondary} />
-            <Text style={styles.statText}>{item.quiz.passingScore}% to pass</Text>
+            <Ionicons name="school-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.statText}>Course: {item.course?.title?.substring(0, 12) || "—"}</Text>
           </View>
         </View>
       </View>

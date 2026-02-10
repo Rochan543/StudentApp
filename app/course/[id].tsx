@@ -33,23 +33,25 @@ export default function CourseDetailScreen() {
   const { data: course, isLoading } = useQuery({
     queryKey: ["course", id],
     queryFn: () => apiGet(`/api/courses/${id}`),
+    enabled: !!id,
   });
 
   const { data: enrollCheck } = useQuery({
     queryKey: ["enrollment-check", id],
     queryFn: () => apiGet(`/api/enrollments/check/${id}`),
+    enabled: !!id,
   });
 
   const { data: assignments } = useQuery({
     queryKey: ["assignments", id],
     queryFn: () => apiGet(`/api/assignments/${id}`),
-    enabled: !!enrollCheck?.enrolled,
+    enabled: !!id && !!enrollCheck?.enrolled,
   });
 
   const { data: quizzes } = useQuery({
     queryKey: ["quizzes", id],
     queryFn: () => apiGet(`/api/quizzes/${id}`),
-    enabled: !!enrollCheck?.enrolled,
+    enabled: !!id && !!enrollCheck?.enrolled,
   });
 
   const enrollMutation = useMutation({
@@ -65,6 +67,7 @@ export default function CourseDetailScreen() {
   });
 
   function handleEnroll() {
+    if (!course) return;
     if (course.price > 0 && !couponCode) {
       setShowCoupon(true);
       return;
@@ -72,7 +75,7 @@ export default function CourseDetailScreen() {
     enrollMutation.mutate({ courseId: parseInt(id!), couponCode: couponCode || undefined });
   }
 
-  if (isLoading) {
+  if (isLoading || !id) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -239,7 +242,7 @@ export default function CourseDetailScreen() {
               <View style={styles.quizInfo}>
                 <Text style={styles.quizTitle}>{quiz.title}</Text>
                 <Text style={styles.quizMeta}>
-                  {quiz.duration} min | {quiz.negativeMarking ? "Negative marking" : "No penalty"}
+                  {quiz.timeLimit} min | {quiz.negativeMarking ? "Negative marking" : "No penalty"}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />

@@ -110,7 +110,7 @@ export default function AdminAssignmentsScreen() {
     createMutation.mutate({
       courseId: selectedCourseId,
       title: title.trim(),
-      description: description.trim() || undefined,
+      description: description.trim() || "",
       dueDate: dueDate.trim() || undefined,
       maxMarks: parseInt(maxMarks) || 100,
       fileUrl,
@@ -155,7 +155,7 @@ export default function AdminAssignmentsScreen() {
             </Text>
           </View>
           <View style={styles.scoreBadge}>
-            <Text style={styles.scoreText}>{item.assignment.maxScore} pts</Text>
+            <Text style={styles.scoreText}>{item.assignment.maxMarks} pts</Text>
           </View>
         </View>
         {item.assignment.fileUrl ? (

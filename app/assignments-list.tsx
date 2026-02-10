@@ -23,7 +23,7 @@ interface AssignmentItem {
     title: string;
     description: string;
     dueDate: string;
-    maxScore: number;
+    maxMarks: number;
     fileUrl: string | null;
     createdAt: string;
   };
@@ -91,8 +91,8 @@ export default function AssignmentsListScreen() {
                 </Text>
               </View>
             )}
-            {item.assignment.maxScore > 0 && (
-              <Text style={styles.maxScore}>Max Score: {item.assignment.maxScore}</Text>
+            {item.assignment.maxMarks > 0 && (
+              <Text style={styles.maxScore}>Max: {item.assignment.maxMarks} marks</Text>
             )}
           </View>
           <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
