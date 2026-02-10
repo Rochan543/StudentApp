@@ -1,0 +1,167 @@
+You are a senior full-stack engineer.
+
+CURRENT STATE:
+- Courses appear in UI but clicking them shows "something went wrong".
+- Coupons cannot be created or do not work.
+- Many pages listed in specification are missing.
+- Some buttons exist but are not connected to backend.
+
+GOAL:
+Create ALL missing pages, ALL APIs, and wire EVERYTHING so the system becomes fully functional with zero dead pages.
+
+---------------------------------------------------
+1. COURSE CLICK ERROR (CRITICAL)
+---------------------------------------------------
+- Clicking a course must navigate to:
+  /student/courses/:courseId
+- Backend must expose:
+  GET /api/courses/:courseId
+- Response must include:
+  course
+  modules
+  lessons
+  roadmap
+  assignments
+  quizzes
+  exams
+- Frontend must fetch using route param courseId.
+- Remove any hardcoded IDs.
+
+---------------------------------------------------
+2. COUPON CREATION & ENROLLMENT (CRITICAL)
+---------------------------------------------------
+Admin:
+- Create coupon:
+  POST /api/coupons
+- Fields:
+  code
+  courseId
+  expiryDate
+  usageLimit
+  discountType = FREE
+
+Student:
+- Validate coupon:
+  POST /api/coupons/validate
+- If valid:
+  Create Enrollment record
+  price becomes 0
+  redirect to course page
+
+If invalid:
+- Show proper message.
+
+---------------------------------------------------
+3. BANNERS / SHOWCASE SYSTEM
+---------------------------------------------------
+Admin:
+- Create banner
+- Upload banner image
+- Set title, subtitle, link(optional)
+
+Student & Guest:
+- Fetch banners
+- Display at top of home page as carousel.
+
+Backend:
+POST /api/banners  
+GET /api/banners  
+
+Database:
+Banner(id, title, subtitle, imageUrl, link, isActive)
+
+---------------------------------------------------
+4. REQUIRED STUDENT PAGES (MUST EXIST)
+---------------------------------------------------
+Create routes + screens:
+
+/student/dashboard  
+/student/profile  
+/student/courses  
+/student/courses/:courseId  
+/student/roadmap  
+/student/assignments  
+/student/quizzes  
+/student/exams  
+/student/meetings  
+/student/chat  
+/student/leaderboard  
+/student/groups  
+/student/notifications  
+
+Each page must:
+- Call backend
+- Display real data
+
+---------------------------------------------------
+5. REQUIRED ADMIN PAGES (MUST EXIST)
+---------------------------------------------------
+/admin/dashboard  
+/admin/users  
+/admin/courses  
+/admin/courses/create  
+/admin/courses/:courseId  
+/admin/coupons  
+/admin/banners  
+/admin/assignments  
+/admin/quizzes  
+/admin/exams  
+/admin/meetings  
+/admin/mock-interviews  
+/admin/groups  
+/admin/leaderboard  
+/admin/reports  
+
+---------------------------------------------------
+6. API WIRING (NO MOCK DATA)
+---------------------------------------------------
+Every page must use real APIs:
+
+Users  
+Courses  
+Modules  
+Lessons  
+Enrollments  
+Coupons  
+Assignments  
+Submissions  
+Quizzes  
+Exams  
+Meetings  
+Groups  
+Banners  
+Leaderboard  
+
+---------------------------------------------------
+7. DATABASE RELATIONS
+---------------------------------------------------
+Course → Module → Lesson  
+Course → Assignment  
+Course → Quiz  
+Course → Exam  
+User → Enrollment → Course  
+Group → Users  
+Banner → HomePage  
+
+---------------------------------------------------
+8. ERROR HANDLING
+---------------------------------------------------
+- No blank pages.
+- No silent failures.
+- Show readable error messages.
+- Backend must return proper status codes.
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+- Admin can create courses, coupons, banners.
+- Student can enroll using coupon.
+- Clicking any course opens details.
+- All menu items open real pages.
+- No "page not found".
+- No "something went wrong".
+- Everything works end-to-end.
+
+Fix ONLY these issues.
+Do NOT redesign UI.
+Do NOT add extra features.

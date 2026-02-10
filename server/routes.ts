@@ -659,6 +659,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/coupons/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      await storage.updateCoupon(parseInt(req.params.id), { isActive: false });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.put("/api/coupons/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const coupon = await storage.updateCoupon(parseInt(req.params.id), req.body);
+      res.json(coupon);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/banners", authMiddleware, adminMiddleware, uploadImage.single("file"), async (req: Request, res: Response) => {
+    try {
+      let imageUrl = req.body.imageUrl;
+      if (req.file) {
+        const result = await uploadToCloudinary(req.file.buffer, "lms/banners", { resourceType: "image" });
+        imageUrl = result.url;
+      }
+      const banner = await storage.createBanner({ ...req.body, imageUrl, createdBy: req.user!.userId });
+      res.json(banner);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/banners", async (req: Request, res: Response) => {
+    try {
+      const activeOnly = req.query.active === "true";
+      const banners = await storage.getBanners(activeOnly);
+      res.json(banners);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.put("/api/banners/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const banner = await storage.updateBanner(parseInt(req.params.id), req.body);
+      res.json(banner);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/banners/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteBanner(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/all-assignments", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      if (req.user!.role === "admin") {
+        const assignments = await storage.getAllAssignments();
+        return res.json(assignments);
+      }
+      const assignments = await storage.getAssignmentsForUser(req.user!.userId);
+      res.json(assignments);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/all-quizzes", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      if (req.user!.role === "admin") {
+        const quizzes = await storage.getAllQuizzes();
+        return res.json(quizzes);
+      }
+      const quizzes = await storage.getQuizzesForUser(req.user!.userId);
+      res.json(quizzes);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/groups/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteGroup(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/meetings", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
       const meeting = await storage.createMeeting({ ...req.body, createdBy: req.user!.userId });

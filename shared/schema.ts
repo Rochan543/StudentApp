@@ -198,6 +198,17 @@ export const leaderboard = pgTable("leaderboard", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const banners = pgTable("banners", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  imageUrl: text("image_url"),
+  link: text("link"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const dailyWork = pgTable("daily_work", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -227,10 +238,12 @@ export const registerSchema = z.object({
   role: z.literal("student").optional().default("student"),
 });
 
-export const adminLoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  adminKey: z.string().min(1),
+export const insertBannerSchema = createInsertSchema(banners).pick({
+  title: true,
+  subtitle: true,
+  imageUrl: true,
+  link: true,
+  isActive: true,
 });
 
 export const insertCourseSchema = createInsertSchema(courses).pick({
@@ -322,3 +335,4 @@ export type Group = typeof groups.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type LeaderboardEntry = typeof leaderboard.$inferSelect;
+export type Banner = typeof banners.$inferSelect;

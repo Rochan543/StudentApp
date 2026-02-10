@@ -416,6 +416,75 @@ export const storage = {
     return entry;
   },
 
+  async createBanner(data: { title: string; subtitle?: string; imageUrl?: string; link?: string; isActive?: boolean; createdBy: number }) {
+    const [b] = await db.insert(schema.banners).values(data).returning();
+    return b;
+  },
+
+  async getBanners(activeOnly = false) {
+    if (activeOnly) {
+      return db.select().from(schema.banners).where(eq(schema.banners.isActive, true)).orderBy(desc(schema.banners.createdAt));
+    }
+    return db.select().from(schema.banners).orderBy(desc(schema.banners.createdAt));
+  },
+
+  async updateBanner(id: number, data: Partial<schema.Banner>) {
+    const [b] = await db.update(schema.banners).set(data).where(eq(schema.banners.id, id)).returning();
+    return b;
+  },
+
+  async deleteBanner(id: number) {
+    await db.delete(schema.banners).where(eq(schema.banners.id, id));
+  },
+
+  async getAllAssignments() {
+    return db.select({
+      assignment: schema.assignments,
+      course: { id: schema.courses.id, title: schema.courses.title },
+    }).from(schema.assignments)
+      .innerJoin(schema.courses, eq(schema.assignments.courseId, schema.courses.id))
+      .orderBy(desc(schema.assignments.createdAt));
+  },
+
+  async getAllQuizzes() {
+    return db.select({
+      quiz: schema.quizzes,
+      course: { id: schema.courses.id, title: schema.courses.title },
+    }).from(schema.quizzes)
+      .innerJoin(schema.courses, eq(schema.quizzes.courseId, schema.courses.id))
+      .orderBy(desc(schema.quizzes.createdAt));
+  },
+
+  async getAssignmentsForUser(userId: number) {
+    const enrolled = await db.select({ courseId: schema.enrollments.courseId }).from(schema.enrollments).where(eq(schema.enrollments.userId, userId));
+    if (enrolled.length === 0) return [];
+    const courseIds = enrolled.map(e => e.courseId);
+    return db.select({
+      assignment: schema.assignments,
+      course: { id: schema.courses.id, title: schema.courses.title },
+    }).from(schema.assignments)
+      .innerJoin(schema.courses, eq(schema.assignments.courseId, schema.courses.id))
+      .where(sql`${schema.assignments.courseId} IN (${sql.join(courseIds.map(id => sql`${id}`), sql`, `)})`)
+      .orderBy(desc(schema.assignments.createdAt));
+  },
+
+  async getQuizzesForUser(userId: number) {
+    const enrolled = await db.select({ courseId: schema.enrollments.courseId }).from(schema.enrollments).where(eq(schema.enrollments.userId, userId));
+    if (enrolled.length === 0) return [];
+    const courseIds = enrolled.map(e => e.courseId);
+    return db.select({
+      quiz: schema.quizzes,
+      course: { id: schema.courses.id, title: schema.courses.title },
+    }).from(schema.quizzes)
+      .innerJoin(schema.courses, eq(schema.quizzes.courseId, schema.courses.id))
+      .where(sql`${schema.quizzes.courseId} IN (${sql.join(courseIds.map(id => sql`${id}`), sql`, `)})`)
+      .orderBy(desc(schema.quizzes.createdAt));
+  },
+
+  async deleteGroup(id: number) {
+    await db.delete(schema.groups).where(eq(schema.groups.id, id));
+  },
+
   async recalculateRanks() {
     const entries = await db.select().from(schema.leaderboard).orderBy(desc(schema.leaderboard.totalPoints));
     for (let i = 0; i < entries.length; i++) {
