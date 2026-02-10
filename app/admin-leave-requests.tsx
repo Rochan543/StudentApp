@@ -41,14 +41,24 @@ export default function AdminLeaveRequestsScreen() {
       queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
+    onError: (error: Error) => {
+      Alert.alert("Error", error.message || "Failed to update leave request");
+    },
   });
 
   function handleAction(id: number, action: string) {
     const label = action === "approved" ? "Approve" : "Reject";
-    Alert.alert(`${label} Request`, `Are you sure you want to ${label.toLowerCase()} this leave request?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: label, onPress: () => updateMutation.mutate({ id, status: action }) },
-    ]);
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(`Are you sure you want to ${label.toLowerCase()} this leave request?`);
+      if (confirmed) {
+        updateMutation.mutate({ id, status: action });
+      }
+    } else {
+      Alert.alert(`${label} Request`, `Are you sure you want to ${label.toLowerCase()} this leave request?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: label, onPress: () => updateMutation.mutate({ id, status: action }) },
+      ]);
+    }
   }
 
   function formatDate(date: string) {
