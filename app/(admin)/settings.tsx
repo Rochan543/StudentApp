@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -6,68 +6,58 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-  Modal,
-  FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
-import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { apiGet } from "@/lib/api";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
 
+interface MenuItem {
+  title: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  bg: string;
+  route: string;
+  count?: number;
+}
+
 export default function AdminSettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
-  const queryClient = useQueryClient();
+  const { user, logout } = useAuth();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
-  const [showCouponModal, setShowCouponModal] = useState(false);
-  const [showMeetingModal, setShowMeetingModal] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
-  const [couponCourseId, setCouponCourseId] = useState("");
-  const [couponMaxUses, setCouponMaxUses] = useState("10");
-  const [meetingTitle, setMeetingTitle] = useState("");
-  const [meetingLink, setMeetingLink] = useState("");
-  const [meetingType, setMeetingType] = useState("class");
-
   const { data: coupons } = useQuery({ queryKey: ["coupons"], queryFn: () => apiGet("/api/coupons") });
-  const { data: courses } = useQuery({ queryKey: ["admin-courses"], queryFn: () => apiGet("/api/courses") });
   const { data: meetings } = useQuery({ queryKey: ["meetings"], queryFn: () => apiGet("/api/meetings") });
-  const { data: leaderboard } = useQuery({ queryKey: ["leaderboard"], queryFn: () => apiGet("/api/leaderboard") });
+  const { data: banners } = useQuery({ queryKey: ["banners"], queryFn: () => apiGet("/api/banners") });
+  const { data: groups } = useQuery({ queryKey: ["groups"], queryFn: () => apiGet("/api/groups") });
 
-  const couponMutation = useMutation({
-    mutationFn: (data: any) => apiPost("/api/coupons", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["coupons"] });
-      setShowCouponModal(false);
-      setCouponCode("");
-      setCouponCourseId("");
-      setCouponMaxUses("10");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    },
-  });
+  const managementItems: MenuItem[] = [
+    { title: "Coupons", subtitle: `${coupons?.length || 0} codes`, icon: "ticket", color: Colors.warning, bg: "#FEF3C7", route: "/admin-coupons" },
+    { title: "Banners", subtitle: `${banners?.length || 0} banners`, icon: "megaphone", color: "#8B5CF6", bg: "#EDE9FE", route: "/admin-banners" },
+    { title: "Meetings", subtitle: `${meetings?.length || 0} scheduled`, icon: "videocam", color: Colors.primary, bg: "#DBEAFE", route: "/admin-meetings" },
+    { title: "Groups", subtitle: `${groups?.length || 0} groups`, icon: "people", color: Colors.accent, bg: "#D1FAE5", route: "/admin-groups" },
+  ];
 
-  const meetingMutation = useMutation({
-    mutationFn: (data: any) => apiPost("/api/meetings", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["meetings"] });
-      setShowMeetingModal(false);
-      setMeetingTitle("");
-      setMeetingLink("");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    },
-  });
+  const contentItems: MenuItem[] = [
+    { title: "Assignments", subtitle: "View all assignments", icon: "document-text", color: "#EC4899", bg: "#FCE7F3", route: "/admin-assignments" },
+    { title: "Quizzes", subtitle: "View all quizzes", icon: "help-circle", color: "#F97316", bg: "#FFF7ED", route: "/admin-quizzes" },
+    { title: "Reports", subtitle: "Analytics & stats", icon: "bar-chart", color: "#06B6D4", bg: "#CFFAFE", route: "/admin-reports" },
+  ];
 
   async function handleLogout() {
     await logout();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.replace("/(auth)/login");
+  }
+
+  function navigateTo(route: string) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(route as any);
   }
 
   return (
@@ -76,124 +66,66 @@ export default function AdminSettingsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: insets.top + webTopInset + 16, paddingBottom: 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.title}>Administration</Text>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>Administration</Text>
+          <Text style={styles.subtitle}>Manage your learning platform</Text>
+        </View>
+        <Pressable onPress={() => router.push("/notifications" as any)} style={styles.notifBtn}>
+          <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+        </Pressable>
+      </View>
+
+      <View style={styles.adminCard}>
+        <View style={styles.adminAvatar}>
+          <Ionicons name="shield-checkmark" size={28} color="#fff" />
+        </View>
+        <View style={styles.adminInfo}>
+          <Text style={styles.adminName}>{user?.name || "Admin"}</Text>
+          <Text style={styles.adminEmail}>{user?.email}</Text>
+        </View>
+      </View>
 
       <Text style={styles.sectionLabel}>MANAGEMENT</Text>
+      <View style={styles.menuGrid}>
+        {managementItems.map((item) => (
+          <Pressable
+            key={item.route}
+            style={({ pressed }) => [styles.menuCard, pressed && styles.pressed]}
+            onPress={() => navigateTo(item.route)}
+          >
+            <View style={[styles.menuIconWrap, { backgroundColor: item.bg }]}>
+              <Ionicons name={item.icon} size={22} color={item.color} />
+            </View>
+            <Text style={styles.menuCardTitle}>{item.title}</Text>
+            <Text style={styles.menuCardSub}>{item.subtitle}</Text>
+          </Pressable>
+        ))}
+      </View>
 
-      <Pressable style={styles.menuItem} onPress={() => setShowCouponModal(true)}>
-        <View style={[styles.menuIcon, { backgroundColor: "#FEF3C7" }]}>
-          <Ionicons name="ticket" size={20} color={Colors.warning} />
-        </View>
-        <View style={styles.menuInfo}>
-          <Text style={styles.menuTitle}>Coupon Codes</Text>
-          <Text style={styles.menuSubtitle}>{coupons?.length || 0} coupons created</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-      </Pressable>
-
-      <Pressable style={styles.menuItem} onPress={() => setShowMeetingModal(true)}>
-        <View style={[styles.menuIcon, { backgroundColor: "#DBEAFE" }]}>
-          <Ionicons name="videocam" size={20} color={Colors.primary} />
-        </View>
-        <View style={styles.menuInfo}>
-          <Text style={styles.menuTitle}>Schedule Meeting</Text>
-          <Text style={styles.menuSubtitle}>{meetings?.length || 0} meetings total</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-      </Pressable>
-
-      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>LEADERBOARD</Text>
-      {(leaderboard || []).slice(0, 5).map((item: any, idx: number) => (
-        <View key={item.entry.id} style={styles.rankItem}>
-          <Text style={styles.rankNum}>#{idx + 1}</Text>
-          <Text style={styles.rankName}>{item.user.name}</Text>
-          <Text style={styles.rankPoints}>{Math.round(item.entry.totalPoints)} pts</Text>
-        </View>
+      <Text style={styles.sectionLabel}>CONTENT & ANALYTICS</Text>
+      {contentItems.map((item) => (
+        <Pressable
+          key={item.route}
+          style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+          onPress={() => navigateTo(item.route)}
+        >
+          <View style={[styles.menuRowIcon, { backgroundColor: item.bg }]}>
+            <Ionicons name={item.icon} size={20} color={item.color} />
+          </View>
+          <View style={styles.menuRowInfo}>
+            <Text style={styles.menuRowTitle}>{item.title}</Text>
+            <Text style={styles.menuRowSub}>{item.subtitle}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+        </Pressable>
       ))}
 
-      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>COUPONS</Text>
-      {(coupons || []).slice(0, 5).map((item: any) => (
-        <View key={item.coupon.id} style={styles.couponItem}>
-          <View>
-            <Text style={styles.couponCode}>{item.coupon.code}</Text>
-            <Text style={styles.couponMeta}>{item.course.title} | Used: {item.coupon.usedCount}/{item.coupon.maxUses}</Text>
-          </View>
-          <View style={[styles.couponStatus, item.coupon.isActive ? styles.active : styles.inactive]}>
-            <Text style={[styles.couponStatusText, item.coupon.isActive ? styles.activeText : styles.inactiveText]}>
-              {item.coupon.isActive ? "Active" : "Inactive"}
-            </Text>
-          </View>
-        </View>
-      ))}
-
-      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>ACCOUNT</Text>
+      <Text style={[styles.sectionLabel, { marginTop: 28 }]}>ACCOUNT</Text>
       <Pressable style={styles.logoutItem} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color={Colors.error} />
         <Text style={styles.logoutText}>Sign Out</Text>
       </Pressable>
-
-      <Modal visible={showCouponModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Coupon</Text>
-              <Pressable onPress={() => setShowCouponModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.text} />
-              </Pressable>
-            </View>
-            <Text style={styles.inputLabel}>Coupon Code</Text>
-            <TextInput style={styles.modalInput} value={couponCode} onChangeText={setCouponCode} placeholder="e.g. FREE2024" autoCapitalize="characters" placeholderTextColor={Colors.textTertiary} />
-            <Text style={styles.inputLabel}>Course ID</Text>
-            <TextInput style={styles.modalInput} value={couponCourseId} onChangeText={setCouponCourseId} placeholder="Enter course ID" keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
-            {courses && (
-              <Text style={styles.hint}>
-                Available: {courses.map((c: any) => `${c.id}: ${c.title}`).join(", ")}
-              </Text>
-            )}
-            <Text style={styles.inputLabel}>Max Uses</Text>
-            <TextInput style={styles.modalInput} value={couponMaxUses} onChangeText={setCouponMaxUses} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
-            <Pressable
-              style={[styles.saveBtn, (!couponCode || !couponCourseId) && styles.saveBtnDisabled]}
-              onPress={() => couponMutation.mutate({ code: couponCode, courseId: parseInt(couponCourseId), maxUses: parseInt(couponMaxUses) || 10 })}
-              disabled={!couponCode || !couponCourseId || couponMutation.isPending}
-            >
-              {couponMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Create Coupon</Text>}
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showMeetingModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Schedule Meeting</Text>
-              <Pressable onPress={() => setShowMeetingModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.text} />
-              </Pressable>
-            </View>
-            <Text style={styles.inputLabel}>Title</Text>
-            <TextInput style={styles.modalInput} value={meetingTitle} onChangeText={setMeetingTitle} placeholder="Meeting title" placeholderTextColor={Colors.textTertiary} />
-            <Text style={styles.inputLabel}>Meeting Link</Text>
-            <TextInput style={styles.modalInput} value={meetingLink} onChangeText={setMeetingLink} placeholder="Zoom/Meet URL" placeholderTextColor={Colors.textTertiary} autoCapitalize="none" />
-            <Text style={styles.inputLabel}>Type</Text>
-            <View style={styles.typeRow}>
-              {["class", "mock_interview", "live_coding"].map((t) => (
-                <Pressable key={t} style={[styles.typeBtn, meetingType === t && styles.typeBtnActive]} onPress={() => setMeetingType(t)}>
-                  <Text style={[styles.typeBtnText, meetingType === t && styles.typeBtnTextActive]}>{t.replace("_", " ")}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pressable
-              style={[styles.saveBtn, (!meetingTitle || !meetingLink) && styles.saveBtnDisabled]}
-              onPress={() => meetingMutation.mutate({ title: meetingTitle, link: meetingLink, meetingType, scheduledAt: new Date(Date.now() + 86400000).toISOString() })}
-              disabled={!meetingTitle || !meetingLink || meetingMutation.isPending}
-            >
-              {meetingMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Schedule Meeting</Text>}
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -201,41 +133,27 @@ export default function AdminSettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: 20 },
-  title: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 24 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
+  title: { fontSize: 26, fontFamily: "Inter_700Bold", color: Colors.text },
+  subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
+  notifBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.surface, justifyContent: "center", alignItems: "center" },
+  adminCard: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.primary, borderRadius: 16, padding: 18, marginBottom: 28 },
+  adminAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center", marginRight: 14 },
+  adminInfo: { flex: 1 },
+  adminName: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff" },
+  adminEmail: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.8)", marginTop: 2 },
   sectionLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.textTertiary, marginBottom: 12, letterSpacing: 0.5 },
-  menuItem: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: Colors.borderLight },
-  menuIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center", marginRight: 12 },
-  menuInfo: { flex: 1 },
-  menuTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  menuSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
-  rankItem: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, borderRadius: 10, padding: 12, marginBottom: 6, borderWidth: 1, borderColor: Colors.borderLight },
-  rankNum: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.primary, width: 36 },
-  rankName: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.text },
-  rankPoints: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary },
-  couponItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.surface, borderRadius: 10, padding: 12, marginBottom: 6, borderWidth: 1, borderColor: Colors.borderLight },
-  couponCode: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text },
-  couponMeta: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
-  couponStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  active: { backgroundColor: "#ECFDF5" },
-  inactive: { backgroundColor: Colors.errorLight },
-  couponStatusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  activeText: { color: Colors.success },
-  inactiveText: { color: Colors.error },
+  menuGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 28 },
+  menuCard: { width: "47%" as any, backgroundColor: Colors.surface, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: Colors.borderLight },
+  menuIconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center", marginBottom: 12 },
+  menuCardTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  menuCardSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
+  menuRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: Colors.borderLight },
+  menuRowIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center", marginRight: 12 },
+  menuRowInfo: { flex: 1 },
+  menuRowTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  menuRowSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
   logoutItem: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, borderRadius: 14, padding: 16, gap: 10, borderWidth: 1, borderColor: Colors.errorLight },
   logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.error },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalContent: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  modalTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
-  inputLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary, marginBottom: 6, marginTop: 12 },
-  modalInput: { backgroundColor: Colors.background, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.text, borderWidth: 1, borderColor: Colors.border },
-  hint: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textTertiary, marginTop: 4 },
-  typeRow: { flexDirection: "row", gap: 8 },
-  typeBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.background, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
-  typeBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  typeBtnText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.textSecondary, textTransform: "capitalize" as const },
-  typeBtnTextActive: { color: "#fff" },
-  saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 24 },
-  saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 });
