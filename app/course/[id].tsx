@@ -9,6 +9,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Image,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -100,9 +102,13 @@ export default function CourseDetailScreen() {
       </Pressable>
 
       <View style={styles.heroSection}>
-        <View style={styles.heroIcon}>
-          <Ionicons name="book" size={32} color={Colors.primary} />
-        </View>
+        {course.imageUrl ? (
+          <Image source={{ uri: course.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.heroIcon}>
+            <Ionicons name="book" size={32} color={Colors.primary} />
+          </View>
+        )}
         <Text style={styles.courseTitle}>{course.title}</Text>
         <View style={styles.metaRow}>
           {course.price > 0 ? (
@@ -112,6 +118,11 @@ export default function CourseDetailScreen() {
           ) : (
             <View style={[styles.priceBadge, { backgroundColor: "#ECFDF5" }]}>
               <Text style={[styles.priceText, { color: Colors.success }]}>FREE</Text>
+            </View>
+          )}
+          {course.duration && (
+            <View style={[styles.priceBadge, { backgroundColor: "#EEF2FF" }]}>
+              <Text style={[styles.priceText, { color: Colors.primary }]}>{course.duration}h</Text>
             </View>
           )}
           <View style={styles.statusBadge}>
@@ -124,6 +135,22 @@ export default function CourseDetailScreen() {
         <Text style={styles.sectionTitle}>Description</Text>
         <Text style={styles.descText}>{course.description}</Text>
       </View>
+
+      {course.brochureUrl && (
+        <Pressable
+          style={styles.brochureBtn}
+          onPress={() => Linking.openURL(course.brochureUrl)}
+        >
+          <View style={styles.brochureIcon}>
+            <Ionicons name="document-attach" size={20} color={Colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.brochureTitle}>Course Brochure</Text>
+            <Text style={styles.brochureSub}>Download PDF</Text>
+          </View>
+          <Ionicons name="download-outline" size={20} color={Colors.primary} />
+        </Pressable>
+      )}
 
       {!isEnrolled && !isAdmin && (
         <View style={styles.enrollSection}>
@@ -275,6 +302,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20 },
   backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, justifyContent: "center", alignItems: "center", marginBottom: 16 },
   heroSection: { alignItems: "center", marginBottom: 28 },
+  heroImage: { width: "100%", height: 180, borderRadius: 16, marginBottom: 16 },
   heroIcon: { width: 72, height: 72, borderRadius: 20, backgroundColor: "#EEF2FF", justifyContent: "center", alignItems: "center", marginBottom: 16 },
   courseTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" },
   metaRow: { flexDirection: "row", gap: 8, marginTop: 12 },
@@ -315,5 +343,9 @@ const styles = StyleSheet.create({
   adminActions: { flexDirection: "row", gap: 12 },
   adminBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: Colors.surface, borderRadius: 14, paddingVertical: 14, gap: 8, borderWidth: 1, borderColor: Colors.borderLight },
   adminBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  brochureBtn: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, borderRadius: 14, padding: 14, marginBottom: 24, borderWidth: 1, borderColor: Colors.borderLight },
+  brochureIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#EEF2FF", justifyContent: "center", alignItems: "center", marginRight: 12 },
+  brochureTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  brochureSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
   errorText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
 });

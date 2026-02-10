@@ -1125,6 +1125,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const search = req.query.search as string | undefined;
+      const users = await storage.getUsers(search);
+      res.json(users);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.delete("/api/roadmap-items/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
       await storage.deleteRoadmapItem(parseInt(req.params.id));

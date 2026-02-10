@@ -36,6 +36,11 @@ function RootLayoutNav() {
       <Stack.Screen name="quizzes-list" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="chat-list" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="groups" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-leave-requests" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-roadmaps" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="student-leave" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="student-roadmap" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="student-attendance" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }

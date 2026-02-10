@@ -46,6 +46,8 @@ export default function AdminSettingsScreen() {
   const contentItems: MenuItem[] = [
     { title: "Assignments", subtitle: "View all assignments", icon: "document-text", color: "#EC4899", bg: "#FCE7F3", route: "/admin-assignments" },
     { title: "Quizzes", subtitle: "View all quizzes", icon: "help-circle", color: "#F97316", bg: "#FFF7ED", route: "/admin-quizzes" },
+    { title: "Leave Requests", subtitle: "Manage student leaves", icon: "calendar-outline", color: "#EF4444", bg: "#FEE2E2", route: "/admin-leave-requests" },
+    { title: "Roadmaps", subtitle: "Student learning paths", icon: "map", color: "#14B8A6", bg: "#CCFBF1", route: "/admin-roadmaps" },
     { title: "Reports", subtitle: "Analytics & stats", icon: "bar-chart", color: "#06B6D4", bg: "#CFFAFE", route: "/admin-reports" },
   ];
 
