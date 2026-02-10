@@ -7,6 +7,10 @@ import { Server as SocketServer } from "socket.io";
 import rateLimit from "express-rate-limit";
 import { uploadImage, uploadDocument, uploadAny, uploadToCloudinary, type CloudinaryFolder } from "./cloudinary";
 
+function paramId(param: string | string[]): number {
+  return parseInt(String(param));
+}
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -213,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = paramId(req.params.id);
       const user = await storage.updateUser(id, req.body);
       if (!user) return res.status(404).json({ message: "User not found" });
       const { password: _, ...userWithoutPassword } = user;
@@ -244,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/courses/:id", async (req: Request, res: Response) => {
     try {
-      const course = await storage.getCourseById(parseInt(req.params.id));
+      const course = await storage.getCourseById(paramId(req.params.id));
       if (!course) return res.status(404).json({ message: "Course not found" });
       const mods = await storage.getModulesByCourse(course.id);
       const modulesWithLessons = await Promise.all(
@@ -261,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/courses/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const course = await storage.updateCourse(parseInt(req.params.id), req.body);
+      const course = await storage.updateCourse(paramId(req.params.id), req.body);
       res.json(course);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -270,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/courses/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteCourse(parseInt(req.params.id));
+      await storage.deleteCourse(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -288,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/modules/:courseId", async (req: Request, res: Response) => {
     try {
-      const mods = await storage.getModulesByCourse(parseInt(req.params.courseId));
+      const mods = await storage.getModulesByCourse(paramId(req.params.courseId));
       res.json(mods);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -297,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/modules/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const mod = await storage.updateModule(parseInt(req.params.id), req.body);
+      const mod = await storage.updateModule(paramId(req.params.id), req.body);
       res.json(mod);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -306,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/modules/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteModule(parseInt(req.params.id));
+      await storage.deleteModule(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -324,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/lessons/:moduleId", async (req: Request, res: Response) => {
     try {
-      const lessons = await storage.getLessonsByModule(parseInt(req.params.moduleId));
+      const lessons = await storage.getLessonsByModule(paramId(req.params.moduleId));
       res.json(lessons);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -333,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/lessons/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const lesson = await storage.updateLesson(parseInt(req.params.id), req.body);
+      const lesson = await storage.updateLesson(paramId(req.params.id), req.body);
       res.json(lesson);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -342,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/lessons/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteLesson(parseInt(req.params.id));
+      await storage.deleteLesson(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -393,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/enrollments/check/:courseId", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const enrollment = await storage.getEnrollment(req.user!.userId, parseInt(req.params.courseId));
+      const enrollment = await storage.getEnrollment(req.user!.userId, paramId(req.params.courseId));
       res.json({ enrolled: !!enrollment, enrollment });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -411,7 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/assignments/:courseId", async (req: Request, res: Response) => {
     try {
-      const assignments = await storage.getAssignmentsByCourse(parseInt(req.params.courseId));
+      const assignments = await storage.getAssignmentsByCourse(paramId(req.params.courseId));
       res.json(assignments);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -420,7 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/assignment/:id", async (req: Request, res: Response) => {
     try {
-      const assignment = await storage.getAssignmentById(parseInt(req.params.id));
+      const assignment = await storage.getAssignmentById(paramId(req.params.id));
       if (!assignment) return res.status(404).json({ message: "Assignment not found" });
       res.json(assignment);
     } catch (err: any) {
@@ -430,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/assignments/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const assignment = await storage.updateAssignment(parseInt(req.params.id), req.body);
+      const assignment = await storage.updateAssignment(paramId(req.params.id), req.body);
       res.json(assignment);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -439,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/assignments/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteAssignment(parseInt(req.params.id));
+      await storage.deleteAssignment(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -463,10 +467,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/submissions/:assignmentId", authMiddleware, async (req: Request, res: Response) => {
     try {
       if (req.user!.role === "admin") {
-        const subs = await storage.getSubmissionsByAssignment(parseInt(req.params.assignmentId));
+        const subs = await storage.getSubmissionsByAssignment(paramId(req.params.assignmentId));
         return res.json(subs);
       }
-      const sub = await storage.getSubmissionByUser(parseInt(req.params.assignmentId), req.user!.userId);
+      const sub = await storage.getSubmissionByUser(paramId(req.params.assignmentId), req.user!.userId);
       res.json(sub || null);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -476,7 +480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/submissions/:id/review", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
       const { marks, feedback } = req.body;
-      const sub = await storage.updateSubmission(parseInt(req.params.id), { marks, feedback, status: "reviewed" });
+      const sub = await storage.updateSubmission(paramId(req.params.id), { marks, feedback, status: "reviewed" });
       if (sub) {
         await storage.updateLeaderboard(sub.userId, { assignmentPoints: marks });
         await storage.createNotification({
@@ -503,7 +507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/quizzes/:courseId", async (req: Request, res: Response) => {
     try {
-      const quizzes = await storage.getQuizzesByCourse(parseInt(req.params.courseId));
+      const quizzes = await storage.getQuizzesByCourse(paramId(req.params.courseId));
       res.json(quizzes);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -512,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/quiz/:id", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const quiz = await storage.getQuizById(parseInt(req.params.id));
+      const quiz = await storage.getQuizById(paramId(req.params.id));
       if (!quiz) return res.status(404).json({ message: "Quiz not found" });
       const quizAny = quiz as any;
       let questions;
@@ -533,7 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/quizzes/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const quiz = await storage.updateQuiz(parseInt(req.params.id), req.body);
+      const quiz = await storage.updateQuiz(paramId(req.params.id), req.body);
       res.json(quiz);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -542,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/quizzes/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteQuiz(parseInt(req.params.id));
+      await storage.deleteQuiz(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -560,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/questions/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const question = await storage.updateQuestion(parseInt(req.params.id), req.body);
+      const question = await storage.updateQuestion(paramId(req.params.id), req.body);
       res.json(question);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -569,7 +573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/questions/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteQuestion(parseInt(req.params.id));
+      await storage.deleteQuestion(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -673,7 +677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/coupons/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.updateCoupon(parseInt(req.params.id), { isActive: false });
+      await storage.updateCoupon(paramId(req.params.id), { isActive: false });
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -682,7 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/coupons/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const coupon = await storage.updateCoupon(parseInt(req.params.id), req.body);
+      const coupon = await storage.updateCoupon(paramId(req.params.id), req.body);
       res.json(coupon);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -715,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/banners/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const banner = await storage.updateBanner(parseInt(req.params.id), req.body);
+      const banner = await storage.updateBanner(paramId(req.params.id), req.body);
       res.json(banner);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -724,7 +728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/banners/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteBanner(parseInt(req.params.id));
+      await storage.deleteBanner(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -759,7 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/groups/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteGroup(parseInt(req.params.id));
+      await storage.deleteGroup(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -796,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/meetings/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteMeeting(parseInt(req.params.id));
+      await storage.deleteMeeting(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -815,7 +819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/attendance/:meetingId", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const records = await storage.getAttendanceByMeeting(parseInt(req.params.meetingId));
+      const records = await storage.getAttendanceByMeeting(paramId(req.params.meetingId));
       res.json(records);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -860,7 +864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/notifications/:id/read", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const n = await storage.markNotificationRead(parseInt(req.params.id));
+      const n = await storage.markNotificationRead(paramId(req.params.id));
       res.json(n);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -878,7 +882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/messages/:partnerId", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const messages = await storage.getMessages(req.user!.userId, parseInt(req.params.partnerId));
+      const messages = await storage.getMessages(req.user!.userId, paramId(req.params.partnerId));
       res.json(messages);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -931,7 +935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Group Member routes
   app.post("/api/groups/:id/members", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const groupId = parseInt(req.params.id);
+      const groupId = paramId(req.params.id);
       const { userId } = req.body;
       await storage.addGroupMember({ groupId, userId: req.user!.userId });
       const member = await storage.addGroupMember({ groupId, userId });
@@ -949,8 +953,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/groups/:id/members/:userId", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const groupId = parseInt(req.params.id);
-      const userId = parseInt(req.params.userId);
+      const groupId = paramId(req.params.id);
+      const userId = paramId(req.params.userId);
       await storage.removeGroupMember(groupId, userId);
       res.json({ success: true });
     } catch (err: any) {
@@ -960,7 +964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/groups/:id/members", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const groupId = parseInt(req.params.id);
+      const groupId = paramId(req.params.id);
       const members = await storage.getGroupMembers(groupId);
       res.json(members);
     } catch (err: any) {
@@ -1009,7 +1013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/leave-requests/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
       const { status } = req.body;
-      const leaveRequest = await storage.updateLeaveRequest(parseInt(req.params.id), { status, reviewedBy: req.user!.userId });
+      const leaveRequest = await storage.updateLeaveRequest(paramId(req.params.id), { status, reviewedBy: req.user!.userId });
       if (leaveRequest && status === "approved") {
         await storage.markDailyAttendance({ userId: leaveRequest.userId, date: leaveRequest.date, status: "holiday" });
       }
@@ -1147,7 +1151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updateData.isCompleted) {
         updateData.completedAt = new Date();
       }
-      const item = await storage.updateRoadmapItem(parseInt(req.params.id), updateData);
+      const item = await storage.updateRoadmapItem(paramId(req.params.id), updateData);
       if (item) {
         const roadmapItems = await storage.getRoadmapItems(item.roadmapId);
         const roadmapItem = roadmapItems.find(ri => ri.roadmapItem.id === item.id);
@@ -1189,7 +1193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/roadmap-items/:id", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      await storage.deleteRoadmapItem(parseInt(req.params.id));
+      await storage.deleteRoadmapItem(paramId(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
