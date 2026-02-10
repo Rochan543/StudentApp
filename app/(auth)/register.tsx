@@ -42,9 +42,13 @@ export default function RegisterScreen() {
     setError("");
     setIsLoading(true);
     try {
-      await register(email.trim(), password, name.trim());
+      const userData = await register(email.trim(), password, name.trim());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/");
+      if (userData.role === "admin") {
+        router.replace("/(admin)");
+      } else {
+        router.replace("/(student)");
+      }
     } catch (e: any) {
       setError(e.message || "Registration failed");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

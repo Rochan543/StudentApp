@@ -39,9 +39,13 @@ export default function AdminLoginScreen() {
     setError("");
     setIsLoading(true);
     try {
-      await adminLogin(email.trim(), password, adminKey.trim());
+      const userData = await adminLogin(email.trim(), password, adminKey.trim());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/");
+      if (userData.role === "admin") {
+        router.replace("/(admin)");
+      } else {
+        router.replace("/(student)");
+      }
     } catch (e: any) {
       setError(e.message || "Authentication failed");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
