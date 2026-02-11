@@ -1,0 +1,119 @@
+You are a senior full-stack engineer.
+
+Fix and implement the following issues exactly as described.
+
+---------------------------------------------------
+1. ROADMAP VIDEO SUPPORT (DO NOT REMOVE)
+---------------------------------------------------
+Video support must NOT be removed.
+
+Fix:
+
+- Roadmap file uploads must support:
+    - PDF
+    - Images
+    - Word (.doc/.docx)
+    - Plain text
+    - Video files
+- Videos must use Cloudinary.
+- Do NOT remove video upload support.
+- Do NOT restrict video files.
+
+---------------------------------------------------
+2. ROADMAP MANAGEMENT CHANGES (ADMIN PANEL)
+---------------------------------------------------
+Fix:
+
+- Remove delete roadmap option.
+- Add option to add new courses to existing roadmap.
+- When admin adds new course to existing roadmap:
+    - It must reflect in user panel immediately.
+
+---------------------------------------------------
+3. REPORT DATA INCORRECT
+---------------------------------------------------
+Current issues:
+
+- 10 users exist but report shows wrong total.
+- Revenue is wrong.
+- Courses count is wrong.
+- Attendance stats are wrong.
+
+Fix:
+
+- Total users must fetch correctly.
+- Revenue must calculate correctly.
+- Courses count must fetch correctly.
+- Attendance must calculate correctly.
+
+---------------------------------------------------
+4. SEPARATE ATTENDANCE REPORT
+---------------------------------------------------
+Admin must see:
+
+- Student name
+- Attendance percentage for each student
+
+Attendance must:
+
+- Update dynamically.
+- Reflect in report stats.
+- Update in Top 10 performance ranking in real-time.
+
+---------------------------------------------------
+5. ASSIGNMENT SCORE REPORT
+---------------------------------------------------
+Admin must see:
+
+- Student name
+- Assignment score
+- All students list with their scores
+
+Assignment score must:
+
+- Fetch correctly.
+- Reflect in user panel.
+- Reflect in admin panel.
+- Update performance ranking.
+
+---------------------------------------------------
+6. .ENV UPDATE (EXACT FORMAT)
+---------------------------------------------------
+Update environment configuration if need like below i need requried things need to be upadted for real deployment : 
+
+# ============================================
+#  Environment Variables
+# ============================================
+# Copy this file to .env and fill in the values.
+# On Replit, use the Secrets tab for sensitive values.
+# ============================================
+
+# --- Backend (Server) ---
+
+DATABASE_URL=
+
+SESSION_SECRET=
+
+PORT=5000
+NODE_ENV=development
+# Cloudinary (File Storage)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret 
+
+
+
+
+
+# --- Mobile App (Expo) ---
+EXPO_PUBLIC_API_BASE_URL=https://ecommerapp.onrender.com
+EXPO_PUBLIC_DOMAIN=ecommerapp.onrender.com
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+All above functionalities should work proper without any fail.
+
+Fix ONLY these items.
+Do NOT add new features.
+Do NOT redesign UI.
