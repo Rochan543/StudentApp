@@ -43,11 +43,25 @@ export default function GroupsScreen() {
   }
 
   function handleVideoCall(groupName: string) {
-    Alert.alert("Video Call", `Start a video call with ${groupName}?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Start", onPress: () => Linking.openURL(`https://meet.google.com/new`) },
-    ]);
-  }
+  Alert.alert("Video Call", `Start a video call with ${groupName}?`, [
+    { text: "Cancel", style: "cancel" },
+    {
+      text: "Start",
+      onPress: async () => {
+        const url = "https://meet.google.com";
+
+        const supported = await Linking.canOpenURL(url);
+
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert("Error", "No browser available to open meeting link");
+        }
+      },
+    },
+  ]);
+}
+
 
   const renderItem = ({ item }: { item: Group }) => {
     return (
