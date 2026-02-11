@@ -4,10 +4,20 @@ import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
 import dotenv from "dotenv";
+
+/* 🔹 ADDED */
+import { createServer } from "http";
+import { Server } from "socket.io";
+/* 🔹 ADDED */
+
 dotenv.config();
 
-
 const app = express();
+
+/* 🔹 ADDED */
+app.set("trust proxy", 1);
+/* 🔹 ADDED */
+
 const log = console.log;
 
 declare module "http" {
@@ -19,7 +29,7 @@ declare module "http" {
 function setupCors(app: express.Application) {
   app.use((req, res, next) => {
     const origins = new Set<string>();
-    origins.add("");
+    origins.add("https://studentapp-dwvm.onrender.com");
 
     if (process.env.REPLIT_DEV_DOMAIN) {
       origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
@@ -33,7 +43,6 @@ function setupCors(app: express.Application) {
 
     const origin = req.header("origin");
 
-    // Allow localhost origins for Expo web development (any port)
     const isLocalhost =
       origin?.startsWith("http://localhost:") ||
       origin?.startsWith("http://127.0.0.1:");
@@ -237,10 +246,6 @@ function validateEnv() {
     console.error(`Missing required environment variables: ${missing.join(", ")}`);
     process.exit(1);
   }
-  const missingOptional = optional.filter((key) => !process.env[key]);
-  if (missingOptional.length > 0) {
-    console.warn(`Warning: Missing optional env vars (file uploads disabled): ${missingOptional.join(", ")}`);
-  }
 }
 
 (async () => {
@@ -251,13 +256,34 @@ function validateEnv() {
 
   configureExpoAndLanding(app);
 
+  /* 🔹 ADDED SOCKET SERVER */
+  const httpServer = createServer(app);
+
+  const io = new Server(httpServer, {
+    cors: { origin: "*" },
+  });
+
+  io.on("connection", (socket) => {
+    console.log("Socket connected:", socket.id);
+
+    socket.on("send-message", (data) => {
+      io.emit("new-message", data);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected:", socket.id);
+    });
+  });
+  /* 🔹 ADDED SOCKET SERVER */
+
   const server = await registerRoutes(app);
 
   setupErrorHandler(app);
 
   const port = parseInt(process.env.PORT || "5000", 10);
-    server.listen(port, () => {
-  log(`express server serving on port ${port}`);
-});
 
+  /* 🔹 CHANGED FROM server.listen */
+  httpServer.listen(port, () => {
+    log(`express server serving on port ${port}`);
+  });
 })();

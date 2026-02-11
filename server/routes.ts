@@ -46,6 +46,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const io = new SocketServer(httpServer, {
     cors: { origin: "*", methods: ["GET", "POST"] },
   });
+  app.set("io", io);
+
 
   io.on("connection", (socket) => {
     socket.on("join", (userId: number) => {
@@ -938,13 +940,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/messages", authMiddleware, async (req: Request, res: Response) => {
-    try {
-      const msg = await storage.createMessage({ ...req.body, senderId: req.user!.userId });
-      res.json(msg);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
+  try {
+    const io = req.app.get("io");
+
+    const msg = await storage.createMessage({
+      ...req.body,
+      senderId: req.user!.userId,
+    });
+
+    if (msg.receiverId) {
+      io.to(`user-${msg.receiverId}`).emit("new-message", msg);
+      io.to(`user-${msg.senderId}`).emit("new-message", msg);
     }
-  });
+
+    if (msg.groupId) {
+      io.emit(`group-${msg.groupId}`, msg);
+    }
+
+    res.json(msg);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
   app.get("/api/groups", authMiddleware, async (_req: Request, res: Response) => {
     try {

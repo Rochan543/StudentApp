@@ -170,7 +170,7 @@ const sendMessage = useCallback(async () => {
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={messages || []}
+          data={[...(messages || [])].reverse()}
           keyExtractor={(item) => item.id.toString()}
           inverted
           contentContainerStyle={styles.messageList}
