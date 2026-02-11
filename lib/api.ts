@@ -47,8 +47,9 @@ export async function apiPut<T = any>(path: string, body?: any): Promise<T> {
   const res = await fetch(new URL(path, baseUrl).toString(), {
     method: "PUT",
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: JSON.stringify(body ?? {}),   // ✅ SAFE FIX
   });
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || res.statusText);
@@ -72,7 +73,12 @@ export async function apiDelete(path: string): Promise<void> {
   }
 }
 
-export async function apiUpload<T = any>(path: string, fileUri: string, fileName: string, mimeType: string): Promise<T> {
+export async function apiUpload<T = any>(
+  path: string,
+  fileUri: string,
+  fileName: string,
+  mimeType: string
+): Promise<T> {
   const baseUrl = getApiUrl();
   const token = await getToken();
   const { Platform } = await import("react-native");

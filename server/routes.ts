@@ -50,6 +50,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   io.on("connection", (socket) => {
+    socket.on("join-group", (groupId: number) => {
+  socket.join(`group-${groupId}`);
+});
+
     socket.on("join", (userId: number) => {
       socket.join(`user-${userId}`);
     });
@@ -60,9 +64,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         io.to(`user-${data.receiverId}`).emit("new-message", msg);
         io.to(`user-${data.senderId}`).emit("new-message", msg);
       }
-      if (data.groupId) {
-        io.emit(`group-${data.groupId}`, msg);
-      }
+      // if (data.groupId) {
+      //   io.emit(`group-${data.groupId}`, msg);
+      // }
+          if (data.groupId) {
+      io.to(`group-${data.groupId}`).emit("new-group-message", msg);
+    }
+
     });
   });
 
@@ -952,10 +960,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       io.to(`user-${msg.receiverId}`).emit("new-message", msg);
       io.to(`user-${msg.senderId}`).emit("new-message", msg);
     }
-
     if (msg.groupId) {
-      io.emit(`group-${msg.groupId}`, msg);
+      io.to(`group-${msg.groupId}`).emit("new-group-message", msg);
     }
+
 
     res.json(msg);
   } catch (err: any) {

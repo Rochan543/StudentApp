@@ -264,16 +264,42 @@ function validateEnv() {
   });
 
   io.on("connection", (socket) => {
-    console.log("Socket connected:", socket.id);
+  console.log("Socket connected:", socket.id);
 
-    socket.on("send-message", (data) => {
-      io.emit("new-message", data);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.id);
-    });
+  // join personal room
+  socket.on("join", (userId) => {
+    socket.join(`user-${userId}`);
   });
+
+  // join group room
+  socket.on("join-group", (groupId) => {
+    socket.join(`group-${groupId}`);
+  });
+
+  // send message
+  socket.on("send-message", async (data) => {
+    try {
+      // private chat
+      if (data.receiverId) {
+        io.to(`user-${data.receiverId}`).emit("new-message", data);
+        io.to(`user-${data.senderId}`).emit("new-message", data);
+      }
+
+      // group chat
+      if (data.groupId) {
+        io.to(`group-${data.groupId}`).emit("new-group-message", data);
+      }
+
+    } catch (err) {
+      console.error("Socket send-message error:", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Socket disconnected:", socket.id);
+  });
+});
+
   /* 🔹 ADDED SOCKET SERVER */
 
   const server = await registerRoutes(app);

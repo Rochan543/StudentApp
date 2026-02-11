@@ -27,13 +27,19 @@ export default function NotificationsScreen() {
   });
 
   async function markRead(id: number) {
-    await apiPut(`/api/notifications/${id}/read`);
+
+    // ✅ FIX: send empty object
+    await apiPut(`/api/notifications/${id}/read`, {});
+
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
     queryClient.invalidateQueries({ queryKey: ["unread-count"] });
   }
 
   async function markAllRead() {
-    await apiPut("/api/notifications/read-all");
+
+    // ✅ FIX: send empty object
+    await apiPut("/api/notifications/read-all", {});
+
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
     queryClient.invalidateQueries({ queryKey: ["unread-count"] });
   }
@@ -64,7 +70,9 @@ export default function NotificationsScreen() {
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </Pressable>
+
         <Text style={styles.title}>Notifications</Text>
+
         <Pressable onPress={markAllRead}>
           <Ionicons name="checkmark-done" size={24} color={Colors.primary} />
         </Pressable>
@@ -78,7 +86,9 @@ export default function NotificationsScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={[styles.list, { paddingBottom: 40 }]}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={() => refetch()} />}
+          refreshControl={
+            <RefreshControl refreshing={false} onRefresh={() => refetch()} />
+          }
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="notifications-off-outline" size={48} color={Colors.textTertiary} />
@@ -87,6 +97,7 @@ export default function NotificationsScreen() {
           }
           renderItem={({ item }) => {
             const icon = getIcon(item.type);
+
             return (
               <Pressable
                 style={[styles.notifCard, !item.isRead && styles.notifCardUnread]}
@@ -95,11 +106,21 @@ export default function NotificationsScreen() {
                 <View style={[styles.notifIcon, { backgroundColor: `${icon.color}15` }]}>
                   <Ionicons name={icon.name} size={22} color={icon.color} />
                 </View>
+
                 <View style={styles.notifContent}>
-                  <Text style={[styles.notifTitle, !item.isRead && styles.notifTitleUnread]}>{item.title}</Text>
-                  <Text style={styles.notifMessage} numberOfLines={2}>{item.message}</Text>
-                  <Text style={styles.notifTime}>{timeAgo(item.createdAt)}</Text>
+                  <Text style={[styles.notifTitle, !item.isRead && styles.notifTitleUnread]}>
+                    {item.title}
+                  </Text>
+
+                  <Text style={styles.notifMessage} numberOfLines={2}>
+                    {item.message}
+                  </Text>
+
+                  <Text style={styles.notifTime}>
+                    {timeAgo(item.createdAt)}
+                  </Text>
                 </View>
+
                 {!item.isRead && <View style={styles.unreadDot} />}
               </Pressable>
             );
@@ -112,19 +133,98 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingBottom: 16, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.borderLight, gap: 12 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.background, justifyContent: "center", alignItems: "center" },
-  title: { flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    gap: 12,
+  },
+
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  title: {
+    flex: 1,
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+
   list: { paddingHorizontal: 20, paddingTop: 12 },
-  notifCard: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: Colors.borderLight },
-  notifCardUnread: { backgroundColor: "#EEF2FF", borderColor: Colors.primary + "30" },
-  notifIcon: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center", marginRight: 12 },
+
+  notifCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+
+  notifCardUnread: {
+    backgroundColor: "#EEF2FF",
+    borderColor: Colors.primary + "30",
+  },
+
+  notifIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+
   notifContent: { flex: 1 },
-  notifTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+
+  notifTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+
   notifTitleUnread: { color: Colors.primaryDark },
-  notifMessage: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2, lineHeight: 18 },
-  notifTime: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textTertiary, marginTop: 4 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
+
+  notifMessage: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+
+  notifTime: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textTertiary,
+    marginTop: 4,
+  },
+
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
+
   emptyState: { alignItems: "center", paddingTop: 80, gap: 12 },
-  emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
+
+  emptyText: {
+    fontSize: 16,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+  },
 });
