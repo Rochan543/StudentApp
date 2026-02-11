@@ -53,7 +53,9 @@ export default function AdminSubmissionsScreen() {
   const queryClient = useQueryClient();
 
   const [reviewModal, setReviewModal] = useState(false);
+  const [userModal, setUserModal] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionData | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ id: number; name: string; email: string } | null>(null);
   const [marks, setMarks] = useState("");
   const [feedback, setFeedback] = useState("");
   const [filter, setFilter] = useState<"all" | "submitted" | "reviewed">("all");
@@ -84,6 +86,11 @@ export default function AdminSubmissionsScreen() {
     setMarks(item.submission.marks?.toString() || "");
     setFeedback(item.submission.feedback || "");
     setReviewModal(true);
+  }
+
+  function openUserSubmissions(user: { id: number; name: string; email: string }) {
+    setSelectedUser(user);
+    setUserModal(true);
   }
 
   function handleReview() {
@@ -118,6 +125,10 @@ export default function AdminSubmissionsScreen() {
 
   const pendingCount = (submissions || []).filter(s => s.submission.status === "submitted").length;
   const reviewedCount = (submissions || []).filter(s => s.submission.status === "reviewed").length;
+
+  const userSubmissions = selectedUser
+    ? (submissions || []).filter(s => s.user.id === selectedUser.id)
+    : [];
 
   function getStatusColor(status: string) {
     switch (status) {
@@ -161,7 +172,9 @@ export default function AdminSubmissionsScreen() {
             <Ionicons name="person" size={18} color={isReviewed ? Colors.success : Colors.warning} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.studentName}>{item.user.name}</Text>
+            <Pressable onPress={(e) => { e.stopPropagation(); openUserSubmissions(item.user); }}>
+              <Text style={styles.studentNameLink}>{item.user.name}</Text>
+            </Pressable>
             <Text style={styles.studentEmail}>{item.user.email}</Text>
           </View>
         </View>
@@ -275,11 +288,12 @@ export default function AdminSubmissionsScreen() {
             {selectedSubmission && (
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 <View style={styles.reviewInfoCard}>
-                  <View style={styles.reviewInfoRow}>
+                  <Pressable style={styles.reviewInfoRow} onPress={() => { setReviewModal(false); openUserSubmissions(selectedSubmission.user); }}>
                     <Ionicons name="person-outline" size={16} color={Colors.primary} />
                     <Text style={styles.reviewInfoLabel}>Student</Text>
-                    <Text style={styles.reviewInfoValue}>{selectedSubmission.user.name}</Text>
-                  </View>
+                    <Text style={[styles.reviewInfoValue, { color: Colors.primary, textDecorationLine: "underline" }]}>{selectedSubmission.user.name}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+                  </Pressable>
                   <View style={styles.reviewInfoRow}>
                     <Ionicons name="document-text-outline" size={16} color={Colors.primary} />
                     <Text style={styles.reviewInfoLabel}>Assignment</Text>
@@ -314,7 +328,7 @@ export default function AdminSubmissionsScreen() {
                     onPress={() => openFile(selectedSubmission.submission.fileUrl!)}
                   >
                     <Ionicons name="document-attach" size={18} color={Colors.primary} />
-                    <Text style={styles.fileButtonText}>View Submitted File</Text>
+                    <Text style={styles.fileButtonText}>View Submitted File (PDF)</Text>
                     <Ionicons name="open-outline" size={16} color={Colors.primary} />
                   </Pressable>
                 )}
@@ -359,6 +373,83 @@ export default function AdminSubmissionsScreen() {
                 </Pressable>
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={userModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setUserModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{selectedUser?.name}</Text>
+                <Text style={styles.userModalEmail}>{selectedUser?.email}</Text>
+              </View>
+              <Pressable onPress={() => { setUserModal(false); setSelectedUser(null); }}>
+                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.userModalSubheading}>All Submissions ({userSubmissions.length})</Text>
+
+            <FlatList
+              data={userSubmissions}
+              keyExtractor={(item) => item.submission.id.toString()}
+              style={{ flexGrow: 0 }}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const isReviewed = item.submission.status === "reviewed";
+                return (
+                  <Pressable
+                    style={({ pressed }) => [styles.userSubCard, pressed && styles.pressed]}
+                    onPress={() => { setUserModal(false); openReview(item); }}
+                  >
+                    <View style={styles.userSubCardHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.userSubAssignment} numberOfLines={1}>{item.assignment.title}</Text>
+                        <Text style={styles.userSubDate}>
+                          {new Date(item.submission.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </Text>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.submission.status) }]}>
+                        <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.submission.status) }]} />
+                        <Text style={[styles.statusText, { color: getStatusColor(item.submission.status) }]}>
+                          {isReviewed ? "Done" : "Pending"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.userSubCardFooter}>
+                      <View style={styles.metaRow}>
+                        {item.submission.fileUrl && (
+                          <Pressable onPress={(e) => { e.stopPropagation(); openFile(item.submission.fileUrl!); }}>
+                            <Ionicons name="attach" size={16} color={Colors.info} />
+                          </Pressable>
+                        )}
+                        {item.submission.content && (
+                          <Ionicons name="chatbubble-outline" size={14} color={Colors.textTertiary} />
+                        )}
+                      </View>
+                      {isReviewed && item.submission.marks !== null ? (
+                        <Text style={styles.userSubMarks}>{item.submission.marks}/{item.assignment.maxMarks}</Text>
+                      ) : (
+                        <Text style={styles.userSubPending}>Tap to review</Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              }}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No submissions from this student</Text>
+                </View>
+              }
+            />
           </View>
         </View>
       </Modal>
@@ -463,7 +554,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  studentName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  studentNameLink: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.primary, textDecorationLine: "underline" },
   studentEmail: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textTertiary, marginTop: 1 },
   assignmentRow: {
     flexDirection: "row",
@@ -484,9 +575,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
   actionsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  fileIconBtn: {
-    padding: 4,
-  },
+  fileIconBtn: { padding: 4 },
   emptyState: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
   emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
@@ -583,4 +672,32 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: { opacity: 0.6 },
   submitButtonText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  userModalEmail: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
+  userModalSubheading: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary, marginBottom: 12 },
+  userSubCard: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  userSubCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  userSubAssignment: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  userSubDate: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textTertiary, marginTop: 2 },
+  userSubCardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  userSubMarks: { fontSize: 13, fontFamily: "Inter_700Bold", color: Colors.success },
+  userSubPending: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.warning },
 });

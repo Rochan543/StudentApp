@@ -26,6 +26,7 @@ const quickLinks = [
   { title: "Assignments", icon: "document-text" as const, color: "#EC4899", bg: "#FCE7F3", route: "/assignments-list" },
   { title: "Quizzes", icon: "help-circle" as const, color: "#F97316", bg: "#FFF7ED", route: "/quizzes-list" },
   { title: "Meetings", icon: "videocam" as const, color: Colors.primary, bg: "#DBEAFE", route: "/meetings" },
+  { title: "Submissions", icon: "documents" as const, color: "#0EA5E9", bg: "#E0F2FE", route: "/student-submissions" },
   { title: "Attendance", icon: "flame" as const, color: "#EF4444", bg: "#FEE2E2", route: "/student-attendance" },
   { title: "Roadmap", icon: "map" as const, color: "#14B8A6", bg: "#CCFBF1", route: "/student-roadmap" },
   { title: "Leave", icon: "calendar-outline" as const, color: "#7C3AED", bg: "#F3E8FF", route: "/student-leave" },

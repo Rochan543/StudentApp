@@ -521,10 +521,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sub = await storage.updateSubmission(paramId(req.params.id), { marks, feedback, status: "reviewed" });
       if (sub) {
         await storage.updateLeaderboard(sub.userId, { assignmentPoints: marks });
+        await storage.recalculateRanks();
         await storage.createNotification({
           userId: sub.userId,
           title: "Assignment Reviewed",
-          message: `Your assignment has been reviewed. Score: ${marks}`,
+          message: `Your assignment has been reviewed. Score: ${marks}/${req.body.maxMarks || marks}`,
           type: "info",
         });
       }
