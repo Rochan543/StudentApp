@@ -1261,25 +1261,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const item = await storage.updateRoadmapItem(paramId(req.params.id), updateData);
       if (item) {
-        const roadmapItems = await storage.getRoadmapItems(item.roadmapId);
-        const roadmapItem = roadmapItems.find(ri => ri.roadmapItem.id === item.id);
-        if (roadmapItem) {
-          const allRoadmaps = await storage.getAllRoadmaps();
-          const roadmapEntry = allRoadmaps.find((r: any) => {
-            const roadmap = r.roadmap || r;
-            return roadmap.id === item.roadmapId;
+        const allRoadmaps = await storage.getAllRoadmaps();
+        const roadmapEntry = allRoadmaps.find((r: any) => {
+          const roadmap = r.roadmap || r;
+          return roadmap.id === item.roadmapId;
+        });
+        const userId = roadmapEntry ? ((roadmapEntry as any).roadmap?.userId || (roadmapEntry as any).userId) : null;
+        if (userId) {
+          const isApproval = updateData.isUnlocked === true;
+          const isCompletion = updateData.isCompleted === true;
+          await storage.createNotification({
+            userId,
+            title: isApproval ? "Access Approved" : isCompletion ? "Item Completed" : "Roadmap Updated",
+            message: isApproval
+              ? "Your unlock request has been approved. You now have access to the next item."
+              : isCompletion
+              ? "A roadmap item has been marked as completed."
+              : "Your roadmap item has been updated.",
+            type: "info",
           });
-          if (roadmapEntry) {
-            const userId = (roadmapEntry as any).roadmap?.userId || (roadmapEntry as any).userId;
-            if (userId) {
-              await storage.createNotification({
-                userId,
-                title: "Roadmap Updated",
-                message: `Your roadmap item has been updated`,
-                type: "info",
-              });
-            }
-          }
         }
       }
       res.json(item);

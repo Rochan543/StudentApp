@@ -120,7 +120,13 @@ export default function AdminRoadmapsScreen() {
   async function pickAndUploadFile(field: string) {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ["application/pdf", "image/*", "video/*", "application/octet-stream"],
+        type: [
+          "application/pdf",
+          "image/*",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "text/plain",
+        ],
         copyToCacheDirectory: true,
       });
       if (result.canceled || !result.assets?.[0]) return;

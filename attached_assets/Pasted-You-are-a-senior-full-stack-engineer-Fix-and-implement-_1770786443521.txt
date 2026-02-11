@@ -1,0 +1,110 @@
+You are a senior full-stack engineer.
+
+Fix and implement the following issues exactly as described.
+
+---------------------------------------------------
+1. ADMIN PANEL REPORT STATS NOT FETCHING
+---------------------------------------------------
+In admin panel:
+
+- Total students count is showing 0.
+- Attendance count is showing 0.
+- Top 10 performance is fetching correctly.
+- Assignment score is NOT fetching.
+
+Fix:
+
+- Total students count must fetch correctly.
+- Attendance stats must fetch correctly.
+- If admin awards marks for assignment:
+    - Assignment score must fetch correctly.
+    - Assignment score must reflect in user panel.
+    - Assignment score must reflect in admin panel.
+
+---------------------------------------------------
+2. ROADMAP RESOURCE DOWNLOAD & ACCESS APPROVAL
+---------------------------------------------------
+In roadmap:
+
+- Admin uploads PDF.
+- User can download PDF.
+
+Problems:
+
+- User documents are not restricted by file type.
+- User requests access.
+- Admin clicks approve.
+- Approve button is not working correctly.
+
+Fix:
+
+- If admin uploads PDF → user must download PDF.
+- If admin uploads image → user must download image.
+- If admin uploads Word → user must download Word.
+- If admin uploads text → user must download text.
+- No other file types allowed.
+
+Access Flow:
+
+- User sends request to lock open and to access resource. 
+- Admin receives request.
+- Admin clicks approve.
+- Approve must work.
+- After approval:
+    - User automatically gets access in user panel.
+
+---------------------------------------------------
+3. DEPLOYMENT PREPARATION – ENV FILES
+---------------------------------------------------
+Review the existing project and prepare it for real deployment.
+
+Implement ONLY the following:
+
+--------------------------------------------------
+3.1 ADD .env FILES
+--------------------------------------------------
+Create environment variable files for:
+
+- Backend
+- Admin Panel
+- Mobile App
+
+--------------------------------------------------
+3.2 AUTO-DETECT REQUIRED VARIABLES
+--------------------------------------------------
+Scan the entire codebase and:
+
+- Find every usage of process.env and import.meta.env
+- Identify ALL required environment variables automatically.
+
+For each environment (Backend, Admin Panel, Mobile App):
+
+- Create a .env file
+- List ONLY the variables actually used in the code
+- Place empty placeholders for values
+
+DO NOT hardcode any variable names manually.
+DO NOT guess variables.
+Only include variables found in the project.
+
+--------------------------------------------------
+3.3 SECURITY RULES
+--------------------------------------------------
+- Do NOT hardcode secrets.
+- Load all env values using environment files.
+- Add .env to .gitignore.
+- Validate missing env variables on server start.
+
+--------------------------------------------------
+3.4 MOBILE APP CONFIRMATION
+--------------------------------------------------
+Ensure the mobile app loads its environment variables correctly and runs without errors.
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+All above functionalities should work properly without any fail.
+
+Fix ONLY these items.
+Do NOT add new features.
+Do NOT redesign UI.

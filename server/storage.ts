@@ -32,14 +32,35 @@ export const storage = {
 
   async getAdminStats() {
     const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.users);
-    const [activeCount] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.users).where(and(eq(schema.users.isActive, true), eq(schema.users.role, "student")));
+    const [studentCount] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.users).where(eq(schema.users.role, "student"));
     const [courseCount] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.courses);
     const [enrollmentCount] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.enrollments);
+    const [attendanceCount] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.attendance);
+    const [submissionCount] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.submissions);
+    const [reviewedSubs] = await db.select({
+      count: sql<number>`count(*)::int`,
+      totalMarks: sql<number>`coalesce(sum(marks), 0)::int`,
+    }).from(schema.submissions).where(eq(schema.submissions.status, "reviewed"));
+    const enrollments = await db.select({ courseId: schema.enrollments.courseId }).from(schema.enrollments);
+    const courseIds = [...new Set(enrollments.map(e => e.courseId))];
+    let totalRevenue = 0;
+    if (courseIds.length > 0) {
+      const coursePrices = await db.select({ id: schema.courses.id, price: schema.courses.price }).from(schema.courses).where(inArray(schema.courses.id, courseIds));
+      for (const enrollment of enrollments) {
+        const course = coursePrices.find(c => c.id === enrollment.courseId);
+        if (course?.price) totalRevenue += Number(course.price);
+      }
+    }
     return {
       totalUsers: userCount.count,
-      activeStudents: activeCount.count,
+      totalStudents: studentCount.count,
       totalCourses: courseCount.count,
       totalEnrollments: enrollmentCount.count,
+      totalAttendance: attendanceCount.count,
+      totalSubmissions: submissionCount.count,
+      reviewedSubmissions: reviewedSubs.count,
+      totalAssignmentMarks: reviewedSubs.totalMarks,
+      totalRevenue,
     };
   },
 

@@ -78,6 +78,32 @@ export default function AdminReportsScreen() {
       bgColor: Colors.warningLight,
     },
     {
+      id: "attendance",
+      title: "Total Attendance",
+      value: stats?.totalAttendance ?? 0,
+      icon: "calendar",
+      color: "#0097A7",
+      bgColor: "#E0F7FA",
+    },
+    {
+      id: "submissions",
+      title: "Assignment Submissions",
+      value: stats?.totalSubmissions ?? 0,
+      icon: "document-text",
+      color: "#7B1FA2",
+      bgColor: "#F3E5F5",
+    },
+    {
+      id: "assignment-score",
+      title: "Avg Assignment Score",
+      value: stats?.reviewedSubmissions
+        ? Math.round(stats.totalAssignmentMarks / stats.reviewedSubmissions)
+        : 0,
+      icon: "ribbon",
+      color: "#E65100",
+      bgColor: "#FFF3E0",
+    },
+    {
       id: "revenue",
       title: "Total Revenue",
       value: stats?.totalRevenue ? `$${Number(stats.totalRevenue).toLocaleString()}` : "$0",
