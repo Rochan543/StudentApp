@@ -49,8 +49,11 @@ export default function AdminQuizzesScreen() {
     enabled: modalVisible,
   });
 
+  const [formError, setFormError] = useState("");
+
   const createQuizMutation = useMutation({
     mutationFn: async () => {
+      setFormError("");
       if (!title.trim()) throw new Error("Title is required");
       if (!selectedCourseId) throw new Error("Please select a course");
 
@@ -100,10 +103,11 @@ export default function AdminQuizzesScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["all-quizzes"] });
       resetForm();
+      setFormError("");
       setModalVisible(false);
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      setFormError(error.message || "Failed to create quiz");
     },
   });
 
@@ -339,6 +343,13 @@ export default function AdminQuizzesScreen() {
                 autoCorrect={false}
               />
 
+              {formError ? (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={16} color={Colors.error} />
+                  <Text style={styles.errorText}>{formError}</Text>
+                </View>
+              ) : null}
+
               <Pressable
                 style={[styles.submitButton, createQuizMutation.isPending && styles.submitButtonDisabled]}
                 onPress={() => createQuizMutation.mutate()}
@@ -546,5 +557,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_700Bold",
     color: "#fff",
+  },
+  errorBox: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    backgroundColor: Colors.errorLight,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -22,22 +22,33 @@ function getTodayStr() {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
-function getLast30Days() {
+function formatDateStr(year: number, month: number, day: number) {
+  return year + "-" + String(month + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+}
+
+function getMonthDays(year: number, month: number) {
   const days: string[] = [];
-  const today = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    days.push(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push(formatDateStr(year, month, d));
   }
   return days;
 }
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 export default function StudentAttendanceScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const todayStr = getTodayStr();
+
+  const now = new Date();
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth());
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ["attendance-stats"],
@@ -72,7 +83,7 @@ export default function StudentAttendanceScreen() {
   }, [streakData]);
 
   const markedToday = attendanceDates.has(todayStr);
-  const last30 = getLast30Days();
+  const monthDays = getMonthDays(viewYear, viewMonth);
 
   const currentStreak = stats?.currentStreak || 0;
   const totalPresent = stats?.totalPresent || 0;
@@ -85,6 +96,33 @@ export default function StudentAttendanceScreen() {
     refetchStats();
     refetchStreak();
   }
+
+  function goToPrevMonth() {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(viewYear - 1);
+    } else {
+      setViewMonth(viewMonth - 1);
+    }
+  }
+
+  function goToNextMonth() {
+    const currentNow = new Date();
+    const maxYear = currentNow.getFullYear();
+    const maxMonth = currentNow.getMonth();
+    if (viewYear > maxYear || (viewYear === maxYear && viewMonth >= maxMonth)) {
+      return;
+    }
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(viewYear + 1);
+    } else {
+      setViewMonth(viewMonth + 1);
+    }
+  }
+
+  const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
+  const canGoNext = !(viewYear >= now.getFullYear() && viewMonth >= now.getMonth());
 
   return (
     <View style={styles.container}>
@@ -150,7 +188,15 @@ export default function StudentAttendanceScreen() {
           </Pressable>
 
           <View style={styles.calendarSection}>
-            <Text style={styles.calendarTitle}>Last 30 Days</Text>
+            <View style={styles.calendarNav}>
+              <Pressable onPress={goToPrevMonth} hitSlop={8}>
+                <Ionicons name="chevron-back" size={22} color={Colors.text} />
+              </Pressable>
+              <Text style={styles.calendarTitle}>{MONTH_NAMES[viewMonth]} {viewYear}</Text>
+              <Pressable onPress={goToNextMonth} hitSlop={8} style={{ opacity: canGoNext ? 1 : 0.3 }}>
+                <Ionicons name="chevron-forward" size={22} color={canGoNext ? Colors.text : Colors.textTertiary} />
+              </Pressable>
+            </View>
             <View style={styles.dayLabelsRow}>
               {dayLabels.map((label, i) => (
                 <View key={i} style={styles.dayLabelWrap}>
@@ -160,13 +206,12 @@ export default function StudentAttendanceScreen() {
             </View>
             <View style={styles.calendarGrid}>
               {(() => {
-                const firstDate = new Date(last30[0]);
-                const startDay = firstDate.getDay();
+                const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
                 const cells: React.ReactNode[] = [];
-                for (let i = 0; i < startDay; i++) {
+                for (let i = 0; i < firstDayOfMonth; i++) {
                   cells.push(<View key={`empty-${i}`} style={styles.calendarCell} />);
                 }
-                last30.forEach((dateStr) => {
+                monthDays.forEach((dateStr) => {
                   const isPresent = attendanceDates.has(dateStr);
                   const isToday = dateStr === todayStr;
                   const isFuture = dateStr > todayStr;
@@ -183,8 +228,8 @@ export default function StudentAttendanceScreen() {
                           ? styles.cellPresent
                           : isSunday
                           ? styles.cellHoliday
-                          : isFuture || isToday
-                          ? styles.cellDefault
+                          : isFuture
+                          ? styles.cellFuture
                           : styles.cellDefault,
                         isToday && styles.cellToday,
                       ]}
@@ -194,6 +239,7 @@ export default function StudentAttendanceScreen() {
                           styles.cellText,
                           isPresent && styles.cellTextPresent,
                           isSunday && !isPresent && styles.cellTextHoliday,
+                          isFuture && !isSunday && styles.cellTextFuture,
                         ]}
                       >
                         {dayNum}
@@ -291,7 +337,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
-  calendarTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 12 },
+  calendarNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  calendarTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text },
   dayLabelsRow: { flexDirection: "row", marginBottom: 6 },
   dayLabelWrap: { flex: 1, alignItems: "center" },
   dayLabelText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.textTertiary },
@@ -306,11 +358,13 @@ const styles = StyleSheet.create({
   cellPresent: { backgroundColor: Colors.success + "20", borderRadius: 8, margin: 1 },
   cellAbsent: { backgroundColor: Colors.error + "08", borderRadius: 8, margin: 1 },
   cellDefault: { backgroundColor: Colors.background, borderRadius: 8, margin: 1 },
+  cellFuture: { backgroundColor: Colors.background, borderRadius: 8, margin: 1, opacity: 0.5 },
   cellHoliday: { backgroundColor: Colors.borderLight, borderRadius: 8, margin: 1 },
   cellToday: { borderWidth: 2, borderColor: Colors.primary },
   cellText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.text },
   cellTextPresent: { color: Colors.success, fontFamily: "Inter_700Bold" },
   cellTextHoliday: { color: Colors.textTertiary },
+  cellTextFuture: { color: Colors.textTertiary },
   legendRow: { flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 14 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },

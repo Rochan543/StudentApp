@@ -35,6 +35,7 @@ export default function AdminAssignmentsScreen() {
   const [dueDate, setDueDate] = useState("");
   const [attachedFile, setAttachedFile] = useState<{ uri: string; name: string } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const { data: assignments, isLoading, refetch } = useQuery({
     queryKey: ["all-assignments"],
@@ -52,10 +53,11 @@ export default function AdminAssignmentsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["all-assignments"] });
       resetForm();
+      setFormError("");
       setShowModal(false);
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message || "Failed to create assignment");
+      setFormError(error.message || "Failed to create assignment");
     },
   });
 
@@ -84,12 +86,13 @@ export default function AdminAssignmentsScreen() {
   }
 
   async function handleCreate() {
+    setFormError("");
     if (!title.trim()) {
-      Alert.alert("Validation", "Title is required");
+      setFormError("Title is required");
       return;
     }
     if (!selectedCourseId) {
-      Alert.alert("Validation", "Please select a course");
+      setFormError("Please select a course");
       return;
     }
 
@@ -100,7 +103,7 @@ export default function AdminAssignmentsScreen() {
         const uploadResult = await apiUpload("/api/upload/assignment", attachedFile.uri, attachedFile.name, "application/pdf");
         fileUrl = uploadResult.url;
       } catch (err: any) {
-        Alert.alert("Upload Error", err.message || "Failed to upload file");
+        setFormError(err.message || "Failed to upload file");
         setUploading(false);
         return;
       }
@@ -305,6 +308,13 @@ export default function AdminAssignmentsScreen() {
                 </Pressable>
               )}
 
+              {formError ? (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={16} color={Colors.error} />
+                  <Text style={styles.errorText}>{formError}</Text>
+                </View>
+              ) : null}
+
               <Pressable
                 style={[styles.createButton, (createMutation.isPending || uploading) && styles.createButtonDisabled]}
                 onPress={handleCreate}
@@ -500,5 +510,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
+  },
+  errorBox: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    backgroundColor: Colors.errorLight,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
   },
 });
