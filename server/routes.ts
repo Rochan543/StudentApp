@@ -938,6 +938,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ✅ GROUP MESSAGES FETCH
+app.get("/api/messages/group/:groupId", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const messages = await storage.getGroupMessages(paramId(req.params.groupId));
+    res.json(messages);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
   app.get("/api/chat-list", authMiddleware, async (req: Request, res: Response) => {
     try {
       const partners = await storage.getChatList(req.user!.userId);

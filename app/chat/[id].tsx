@@ -54,9 +54,9 @@ export default function ChatScreen() {
     useQuery({
       queryKey: ["messages", id],
       queryFn: () =>
-        groupId
-          ? apiGet(`/api/messages/${groupId}`)
-          : apiGet(`/api/messages/${id}`),
+      groupId
+    ? apiGet(`/api/messages/group/${groupId}`)
+    : apiGet(`/api/messages/${id}`),
       enabled: !isChatList && !!id,
     });
 
