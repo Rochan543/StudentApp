@@ -268,8 +268,16 @@ export const roadmapItems = pgTable("roadmap_items", {
   orderIndex: integer("order_index").notNull().default(0),
   isUnlocked: boolean("is_unlocked").notNull().default(false),
   isCompleted: boolean("is_completed").notNull().default(false),
+  unlockRequested: boolean("unlock_requested").notNull().default(false),
+  unlockRequestedAt: timestamp("unlock_requested_at"),
   unlockedAt: timestamp("unlocked_at"),
   completedAt: timestamp("completed_at"),
+  brochureUrl: text("brochure_url"),
+  videoUrl: text("video_url"),
+  cheatSheetUrl: text("cheat_sheet_url"),
+  tipsUrl: text("tips_url"),
+  telegramLink: text("telegram_link"),
+  whatsappLink: text("whatsapp_link"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

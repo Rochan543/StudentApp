@@ -406,7 +406,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assignments", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const assignment = await storage.createAssignment({ ...req.body, createdBy: req.user!.userId });
+      const data = { ...req.body, createdBy: req.user!.userId };
+      if (data.dueDate && typeof data.dueDate === "string") {
+        data.dueDate = new Date(data.dueDate);
+      }
+      if (data.dueDate && isNaN((data.dueDate as Date).getTime())) {
+        data.dueDate = null;
+      }
+      const assignment = await storage.createAssignment(data);
       res.json(assignment);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -1125,8 +1132,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             orderIndex: i.roadmapItem.orderIndex,
             isUnlocked: i.roadmapItem.isUnlocked,
             isCompleted: i.roadmapItem.isCompleted,
+            unlockRequested: i.roadmapItem.unlockRequested,
+            unlockRequestedAt: i.roadmapItem.unlockRequestedAt,
             unlockedAt: i.roadmapItem.unlockedAt,
             completedAt: i.roadmapItem.completedAt,
+            brochureUrl: i.roadmapItem.brochureUrl,
+            videoUrl: i.roadmapItem.videoUrl,
+            cheatSheetUrl: i.roadmapItem.cheatSheetUrl,
+            tipsUrl: i.roadmapItem.tipsUrl,
+            telegramLink: i.roadmapItem.telegramLink,
+            whatsappLink: i.roadmapItem.whatsappLink,
             course: i.course,
           }));
           return {
@@ -1157,11 +1172,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderIndex: i.roadmapItem.orderIndex,
         isUnlocked: i.roadmapItem.isUnlocked,
         isCompleted: i.roadmapItem.isCompleted,
+        unlockRequested: i.roadmapItem.unlockRequested,
+        unlockRequestedAt: i.roadmapItem.unlockRequestedAt,
         unlockedAt: i.roadmapItem.unlockedAt,
         completedAt: i.roadmapItem.completedAt,
+        brochureUrl: i.roadmapItem.brochureUrl,
+        videoUrl: i.roadmapItem.videoUrl,
+        cheatSheetUrl: i.roadmapItem.cheatSheetUrl,
+        tipsUrl: i.roadmapItem.tipsUrl,
+        telegramLink: i.roadmapItem.telegramLink,
+        whatsappLink: i.roadmapItem.whatsappLink,
         course: i.course,
       }));
       res.json({ ...roadmap, items });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/roadmap-items/:id/request-unlock", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const itemId = paramId(req.params.id);
+      const item = await storage.updateRoadmapItem(itemId, {
+        unlockRequested: true,
+        unlockRequestedAt: new Date(),
+      } as any);
+      if (item) {
+        const admins = await storage.getUsers();
+        for (const admin of admins) {
+          if (admin.role === "admin") {
+            await storage.createNotification({
+              userId: admin.id,
+              title: "Unlock Request",
+              message: `A student has requested to unlock a roadmap item`,
+              type: "info",
+            });
+          }
+        }
+      }
+      res.json(item);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -1172,6 +1221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = { ...req.body };
       if (updateData.isUnlocked) {
         updateData.unlockedAt = new Date();
+        updateData.unlockRequested = false;
       }
       if (updateData.isCompleted) {
         updateData.completedAt = new Date();

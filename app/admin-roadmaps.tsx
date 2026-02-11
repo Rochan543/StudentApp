@@ -10,15 +10,17 @@ import {
   RefreshControl,
   Modal,
   ScrollView,
+  TextInput,
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiUpload } from "@/lib/api";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
+import * as DocumentPicker from "expo-document-picker";
 
 export default function AdminRoadmapsScreen() {
   const insets = useSafeAreaInsets();
@@ -27,9 +29,14 @@ export default function AdminRoadmapsScreen() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showResourceModal, setShowResourceModal] = useState(false);
   const [selectedRoadmap, setSelectedRoadmap] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedCourses, setSelectedCourses] = useState<number[]>([]);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [telegramLink, setTelegramLink] = useState("");
+  const [whatsappLink, setWhatsappLink] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const { data: roadmaps, isLoading, refetch } = useQuery({
     queryKey: ["roadmaps"],
@@ -103,11 +110,58 @@ export default function AdminRoadmapsScreen() {
     updateItemMutation.mutate({ id: itemId, data: { isCompleted: true } });
   }
 
+  function openResourceEditor(item: any) {
+    setEditingItem(item);
+    setTelegramLink(item.telegramLink || "");
+    setWhatsappLink(item.whatsappLink || "");
+    setShowResourceModal(true);
+  }
+
+  async function pickAndUploadFile(field: string) {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "image/*", "video/*", "application/octet-stream"],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      setUploading(true);
+      const uploadResult = await apiUpload("/api/upload/assignment", asset.uri, asset.name, asset.mimeType || "application/pdf");
+      if (uploadResult.url && editingItem) {
+        await updateItemMutation.mutateAsync({ id: editingItem.id, data: { [field]: uploadResult.url } });
+        setEditingItem((prev: any) => prev ? { ...prev, [field]: uploadResult.url } : prev);
+      }
+      setUploading(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      setUploading(false);
+      if (Platform.OS === "web") {
+        window.alert("Upload failed: " + (err.message || "Unknown error"));
+      } else {
+        Alert.alert("Error", err.message || "Upload failed");
+      }
+    }
+  }
+
+  function saveLinks() {
+    if (!editingItem) return;
+    updateItemMutation.mutate({
+      id: editingItem.id,
+      data: { telegramLink: telegramLink.trim() || null, whatsappLink: whatsappLink.trim() || null },
+    });
+    setShowResourceModal(false);
+  }
+
+  const pendingRequests = (roadmaps || []).reduce((count: number, r: any) => {
+    return count + (r.items || []).filter((i: any) => i.unlockRequested && !i.isUnlocked).length;
+  }, 0);
+
   function renderRoadmap({ item }: { item: any }) {
     const items = item.items || [];
     const completed = items.filter((i: any) => i.isCompleted).length;
     const total = items.length;
     const studentName = item.user?.name || "Student";
+    const pendingCount = items.filter((i: any) => i.unlockRequested && !i.isUnlocked).length;
 
     return (
       <Pressable style={styles.card} onPress={() => openDetail(item)}>
@@ -121,6 +175,11 @@ export default function AdminRoadmapsScreen() {
               {completed}/{total} items completed
             </Text>
           </View>
+          {pendingCount > 0 && (
+            <View style={styles.requestBadge}>
+              <Text style={styles.requestBadgeText}>{pendingCount}</Text>
+            </View>
+          )}
           <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
         </View>
         <View style={styles.progressBarBg}>
@@ -141,7 +200,14 @@ export default function AdminRoadmapsScreen() {
         <Pressable testID="back-button" onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Roadmaps</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={styles.headerTitle}>Roadmaps</Text>
+          {pendingRequests > 0 && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{pendingRequests}</Text>
+            </View>
+          )}
+        </View>
         <Pressable testID="add-button" onPress={() => setShowCreateModal(true)}>
           <Ionicons name="add-circle" size={26} color={Colors.primary} />
         </Pressable>
@@ -226,7 +292,7 @@ export default function AdminRoadmapsScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentLarge, { paddingBottom: insets.bottom + 20 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
                 {selectedRoadmap?.user?.name || "Student"}'s Roadmap
               </Text>
               <Pressable testID="close-detail-modal" onPress={() => setShowDetailModal(false)}>
@@ -275,6 +341,10 @@ export default function AdminRoadmapsScreen() {
                           <View style={[styles.itemBadge, { backgroundColor: Colors.warningLight }]}>
                             <Text style={[styles.itemBadgeText, { color: Colors.warning }]}>Unlocked</Text>
                           </View>
+                        ) : item.unlockRequested ? (
+                          <View style={[styles.itemBadge, { backgroundColor: "#FFF3E0" }]}>
+                            <Text style={[styles.itemBadgeText, { color: "#E65100" }]}>Unlock Requested</Text>
+                          </View>
                         ) : (
                           <View style={[styles.itemBadge, { backgroundColor: Colors.borderLight }]}>
                             <Text style={[styles.itemBadgeText, { color: Colors.textTertiary }]}>Locked</Text>
@@ -289,7 +359,9 @@ export default function AdminRoadmapsScreen() {
                             onPress={() => handleUnlock(item.id)}
                           >
                             <Ionicons name="lock-open-outline" size={14} color={Colors.warning} />
-                            <Text style={[styles.itemActionText, { color: Colors.warning }]}>Unlock</Text>
+                            <Text style={[styles.itemActionText, { color: Colors.warning }]}>
+                              {item.unlockRequested ? "Approve" : "Unlock"}
+                            </Text>
                           </Pressable>
                         )}
                         {item.isUnlocked && !item.isCompleted && (
@@ -302,6 +374,13 @@ export default function AdminRoadmapsScreen() {
                             <Text style={[styles.itemActionText, { color: Colors.success }]}>Complete</Text>
                           </Pressable>
                         )}
+                        <Pressable
+                          style={[styles.itemActionBtn, { backgroundColor: Colors.primary + "15" }]}
+                          onPress={() => openResourceEditor(item)}
+                        >
+                          <Ionicons name="folder-outline" size={14} color={Colors.primary} />
+                          <Text style={[styles.itemActionText, { color: Colors.primary }]}>Resources</Text>
+                        </Pressable>
                       </View>
                     </View>
                   </View>
@@ -311,6 +390,124 @@ export default function AdminRoadmapsScreen() {
                   <Text style={styles.emptyText}>No items in this roadmap</Text>
                 </View>
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showResourceModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContentLarge, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle} numberOfLines={1}>Resources</Text>
+              <Pressable onPress={() => setShowResourceModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.resourceSectionTitle}>
+                {editingItem?.course?.title || "Course"}
+              </Text>
+
+              <View style={styles.resourceRow}>
+                <View style={styles.resourceInfo}>
+                  <Ionicons name="document-text" size={18} color={Colors.primary} />
+                  <Text style={styles.resourceLabel}>Brochure (PDF)</Text>
+                </View>
+                {editingItem?.brochureUrl ? (
+                  <View style={styles.resourceStatus}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                    <Text style={styles.resourceUploaded}>Uploaded</Text>
+                  </View>
+                ) : null}
+                <Pressable style={styles.uploadSmallBtn} onPress={() => pickAndUploadFile("brochureUrl")} disabled={uploading}>
+                  <Ionicons name="cloud-upload-outline" size={16} color={Colors.primary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.resourceRow}>
+                <View style={styles.resourceInfo}>
+                  <Ionicons name="videocam" size={18} color="#E53935" />
+                  <Text style={styles.resourceLabel}>Video</Text>
+                </View>
+                {editingItem?.videoUrl ? (
+                  <View style={styles.resourceStatus}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                    <Text style={styles.resourceUploaded}>Uploaded</Text>
+                  </View>
+                ) : null}
+                <Pressable style={styles.uploadSmallBtn} onPress={() => pickAndUploadFile("videoUrl")} disabled={uploading}>
+                  <Ionicons name="cloud-upload-outline" size={16} color={Colors.primary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.resourceRow}>
+                <View style={styles.resourceInfo}>
+                  <Ionicons name="newspaper" size={18} color="#FF9800" />
+                  <Text style={styles.resourceLabel}>Cheat Sheet</Text>
+                </View>
+                {editingItem?.cheatSheetUrl ? (
+                  <View style={styles.resourceStatus}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                    <Text style={styles.resourceUploaded}>Uploaded</Text>
+                  </View>
+                ) : null}
+                <Pressable style={styles.uploadSmallBtn} onPress={() => pickAndUploadFile("cheatSheetUrl")} disabled={uploading}>
+                  <Ionicons name="cloud-upload-outline" size={16} color={Colors.primary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.resourceRow}>
+                <View style={styles.resourceInfo}>
+                  <Ionicons name="bulb" size={18} color="#7C4DFF" />
+                  <Text style={styles.resourceLabel}>Tips & Tricks</Text>
+                </View>
+                {editingItem?.tipsUrl ? (
+                  <View style={styles.resourceStatus}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                    <Text style={styles.resourceUploaded}>Uploaded</Text>
+                  </View>
+                ) : null}
+                <Pressable style={styles.uploadSmallBtn} onPress={() => pickAndUploadFile("tipsUrl")} disabled={uploading}>
+                  <Ionicons name="cloud-upload-outline" size={16} color={Colors.primary} />
+                </Pressable>
+              </View>
+
+              {uploading && (
+                <View style={styles.uploadingRow}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.uploadingText}>Uploading...</Text>
+                </View>
+              )}
+
+              <Text style={[styles.inputLabel, { marginTop: 20 }]}>Telegram Channel Link</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="https://t.me/..."
+                placeholderTextColor={Colors.textTertiary}
+                value={telegramLink}
+                onChangeText={setTelegramLink}
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.inputLabel}>WhatsApp Channel Link</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="https://chat.whatsapp.com/..."
+                placeholderTextColor={Colors.textTertiary}
+                value={whatsappLink}
+                onChangeText={setWhatsappLink}
+                autoCapitalize="none"
+              />
+
+              <Pressable style={styles.saveBtn} onPress={saveLinks} disabled={updateItemMutation.isPending}>
+                {updateItemMutation.isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.saveBtnText}>Save Links</Text>
+                )}
+              </Pressable>
             </ScrollView>
           </View>
         </View>
@@ -332,6 +529,15 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   headerTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  headerBadge: {
+    backgroundColor: "#E53935",
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerBadgeText: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
   list: { paddingHorizontal: 20, paddingTop: 16 },
   card: {
     backgroundColor: Colors.surface,
@@ -347,6 +553,16 @@ const styles = StyleSheet.create({
   progressText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
   progressBarBg: { height: 6, backgroundColor: Colors.borderLight, borderRadius: 3, overflow: "hidden" },
   progressBarFill: { height: 6, backgroundColor: Colors.primary, borderRadius: 3 },
+  requestBadge: {
+    backgroundColor: "#E53935",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 4,
+  },
+  requestBadgeText: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
   emptyState: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
   emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
@@ -354,7 +570,18 @@ const styles = StyleSheet.create({
   modalContentLarge: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: "85%" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   modalTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text, flex: 1 },
-  inputLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary, marginBottom: 8, marginTop: 4 },
+  inputLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary, marginBottom: 6, marginTop: 12 },
+  input: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
   selectRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -371,7 +598,7 @@ const styles = StyleSheet.create({
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
   checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: Colors.border, justifyContent: "center", alignItems: "center" },
   checkboxActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 16 },
+  saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 16, marginBottom: 12 },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
   roadmapItem: { flexDirection: "row", marginBottom: 4 },
@@ -386,7 +613,30 @@ const styles = StyleSheet.create({
   roadmapItemMeta: { flexDirection: "row", marginTop: 6 },
   itemBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   itemBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  itemActions: { flexDirection: "row", gap: 8, marginTop: 8 },
+  itemActions: { flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" },
   itemActionBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   itemActionText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  resourceSectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.text, marginBottom: 16 },
+  resourceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    gap: 10,
+  },
+  resourceInfo: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  resourceLabel: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.text },
+  resourceStatus: { flexDirection: "row", alignItems: "center", gap: 4 },
+  resourceUploaded: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.success },
+  uploadSmallBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.primary + "10",
+  },
+  uploadingRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10 },
+  uploadingText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.primary },
 });
