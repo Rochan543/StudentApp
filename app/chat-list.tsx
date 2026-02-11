@@ -38,7 +38,10 @@ export default function ChatListScreen() {
       <Pressable
         style={({ pressed }) => [styles.card, pressed && styles.pressed]}
         onPress={() =>
-          router.push({pathname: "/chat/[id]",params: { id: `group-${item.id}` },})
+          router.push({
+            pathname: "/chat/[id]",
+            params: { id: `group-${item.id}` },
+          })
         }
       >
         <View style={styles.cardRow}>
@@ -46,12 +49,20 @@ export default function ChatListScreen() {
             <Ionicons name="chatbubbles" size={22} color={Colors.primary} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {item.name}
+            </Text>
             {item.description ? (
-              <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
+              <Text style={styles.cardDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
             ) : null}
           </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={Colors.textTertiary}
+          />
         </View>
       </Pressable>
     );
@@ -59,7 +70,12 @@ export default function ChatListScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12 }]}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + webTopInset + 12 },
+        ]}
+      >
         <Pressable testID="back-button" onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </Pressable>
@@ -68,7 +84,11 @@ export default function ChatListScreen() {
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator
+          size="large"
+          color={Colors.primary}
+          style={{ marginTop: 40 }}
+        />
       ) : (
         <FlatList
           data={groups || []}
@@ -76,12 +96,20 @@ export default function ChatListScreen() {
           renderItem={renderItem}
           contentContainerStyle={[styles.list, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={() => refetch()} />}
+          refreshControl={
+            <RefreshControl refreshing={false} onRefresh={() => refetch()} />
+          }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="chatbubble-ellipses-outline" size={48} color={Colors.textTertiary} />
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={48}
+                color={Colors.textTertiary}
+              />
               <Text style={styles.emptyText}>No groups available</Text>
-              <Text style={styles.emptySubtext}>Join a course to access group chats</Text>
+              <Text style={styles.emptySubtext}>
+                Join a course to access group chats
+              </Text>
             </View>
           }
         />
@@ -102,7 +130,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
-  headerTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
   list: { paddingHorizontal: 20, paddingTop: 16 },
   card: {
     backgroundColor: Colors.surface,
@@ -124,9 +156,26 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   cardContent: { flex: 1 },
-  cardTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  cardDescription: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
+  cardTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  cardDescription: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
-  emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
+  emptyText: {
+    fontSize: 16,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textTertiary,
+  },
 });
