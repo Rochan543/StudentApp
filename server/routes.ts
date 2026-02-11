@@ -1128,6 +1128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/roadmaps", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
       const { userId, items } = req.body;
+      await storage.deleteRoadmapsByUser(userId);
       const roadmap = await storage.createRoadmap({ userId, createdBy: req.user!.userId });
       if (items && Array.isArray(items)) {
         for (let i = 0; i < items.length; i++) {

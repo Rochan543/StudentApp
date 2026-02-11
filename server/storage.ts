@@ -601,8 +601,16 @@ export const storage = {
   },
 
   async getRoadmapByUser(userId: number) {
-    const [r] = await db.select().from(schema.roadmaps).where(eq(schema.roadmaps.userId, userId));
+    const [r] = await db.select().from(schema.roadmaps).where(eq(schema.roadmaps.userId, userId)).orderBy(desc(schema.roadmaps.createdAt)).limit(1);
     return r;
+  },
+
+  async deleteRoadmapsByUser(userId: number) {
+    const userRoadmaps = await db.select({ id: schema.roadmaps.id }).from(schema.roadmaps).where(eq(schema.roadmaps.userId, userId));
+    for (const rm of userRoadmaps) {
+      await db.delete(schema.roadmapItems).where(eq(schema.roadmapItems.roadmapId, rm.id));
+    }
+    await db.delete(schema.roadmaps).where(eq(schema.roadmaps.userId, userId));
   },
 
   async getRoadmapItems(roadmapId: number) {
