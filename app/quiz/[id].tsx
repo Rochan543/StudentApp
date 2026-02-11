@@ -17,13 +17,15 @@ import { apiGet, apiPost } from "@/lib/api";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
 
+const LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
 export default function QuizScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [started, setStarted] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -43,12 +45,12 @@ export default function QuizScreen() {
   }, [quiz]);
 
   useEffect(() => {
-    if (started && quiz?.duration && timeLeft > 0) {
+    if (started && timeLeft > 0) {
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             if (timerRef.current) clearInterval(timerRef.current);
-            handleSubmit();
+            doSubmit();
             return 0;
           }
           return prev - 1;
@@ -64,7 +66,7 @@ export default function QuizScreen() {
     mutationFn: () => apiPost("/api/quiz-attempt", { quizId: parseInt(id!) }),
     onSuccess: () => {
       setStarted(true);
-      setTimeLeft((quiz?.duration || 30) * 60);
+      setTimeLeft((quiz?.timeLimit || 30) * 60);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     },
     onError: (err: any) => Alert.alert("Error", err.message),
@@ -78,23 +80,30 @@ export default function QuizScreen() {
       if (timerRef.current) clearInterval(timerRef.current);
       queryClient.invalidateQueries({ queryKey: ["quiz", id] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["all-quizzes"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (err: any) => Alert.alert("Error", err.message),
   });
 
-  function handleSubmit() {
-    Alert.alert("Submit Quiz", "Are you sure you want to submit?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Submit",
-        onPress: () => submitMutation.mutate({ quizId: parseInt(id!), answers }),
-      },
-    ]);
+  function doSubmit() {
+    submitMutation.mutate({ quizId: parseInt(id!), answers });
   }
 
-  function selectAnswer(questionId: number, option: string) {
-    setAnswers((prev) => ({ ...prev, [questionId.toString()]: option }));
+  function handleSubmit() {
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("Are you sure you want to submit the quiz?");
+      if (confirmed) doSubmit();
+    } else {
+      Alert.alert("Submit Quiz", "Are you sure you want to submit?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Submit", onPress: doSubmit },
+      ]);
+    }
+  }
+
+  function selectAnswer(questionId: number, optionIndex: number) {
+    setAnswers((prev) => ({ ...prev, [questionId.toString()]: optionIndex }));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
@@ -176,7 +185,7 @@ export default function QuizScreen() {
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Ionicons name="time" size={20} color={Colors.primary} />
-              <Text style={styles.infoLabel}>{quiz.duration} min</Text>
+              <Text style={styles.infoLabel}>{quiz.timeLimit} min</Text>
             </View>
             <View style={styles.infoItem}>
               <Ionicons name="list" size={20} color={Colors.accent} />
@@ -207,6 +216,8 @@ export default function QuizScreen() {
     );
   }
 
+  const optionsArr: string[] = currentQuestion?.options || [];
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + webTopInset }]}>
       <View style={styles.quizHeader}>
@@ -234,21 +245,19 @@ export default function QuizScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.questionText}>{currentQuestion.questionText}</Text>
+          <Text style={styles.questionText}>{currentQuestion.text}</Text>
 
-          {["A", "B", "C", "D"].map((opt) => {
-            const optionKey = `option${opt}` as string;
-            const optionText = currentQuestion[optionKey];
-            if (!optionText) return null;
-            const isSelected = answers[currentQuestion.id.toString()] === opt;
+          {optionsArr.map((optionText: string, idx: number) => {
+            const letter = LETTERS[idx] || String(idx + 1);
+            const isSelected = answers[currentQuestion.id.toString()] === idx;
             return (
               <Pressable
-                key={opt}
+                key={idx}
                 style={[styles.optionCard, isSelected && styles.optionSelected]}
-                onPress={() => selectAnswer(currentQuestion.id, opt)}
+                onPress={() => selectAnswer(currentQuestion.id, idx)}
               >
                 <View style={[styles.optionLetter, isSelected && styles.optionLetterSelected]}>
-                  <Text style={[styles.optionLetterText, isSelected && styles.optionLetterTextSelected]}>{opt}</Text>
+                  <Text style={[styles.optionLetterText, isSelected && styles.optionLetterTextSelected]}>{letter}</Text>
                 </View>
                 <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>{optionText}</Text>
               </Pressable>
@@ -270,7 +279,7 @@ export default function QuizScreen() {
                   <View style={[
                     styles.qDot,
                     idx === currentQ && styles.qDotActive,
-                    answers[questions[idx]?.id?.toString()] && styles.qDotAnswered,
+                    answers[questions[idx]?.id?.toString()] !== undefined && styles.qDotAnswered,
                   ]} />
                 </Pressable>
               ))}

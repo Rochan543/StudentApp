@@ -75,17 +75,25 @@ export async function apiDelete(path: string): Promise<void> {
 export async function apiUpload<T = any>(path: string, fileUri: string, fileName: string, mimeType: string): Promise<T> {
   const baseUrl = getApiUrl();
   const token = await getToken();
+  const { Platform } = await import("react-native");
 
-  const { File } = await import("expo-file-system");
-  const { fetch: expoFetch } = await import("expo/fetch");
-
-  const file = new File(fileUri);
   const formData = new FormData();
-  formData.append("file", file as any);
+
+  if (Platform.OS === "web") {
+    const response = await globalThis.fetch(fileUri);
+    const blob = await response.blob();
+    const webFile = new globalThis.File([blob], fileName, { type: mimeType });
+    formData.append("file", webFile);
+  } else {
+    const { File } = await import("expo-file-system");
+    const file = new File(fileUri);
+    formData.append("file", file as any);
+  }
 
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
 
+  const { fetch: expoFetch } = await import("expo/fetch");
   const res = await expoFetch(new URL(path, baseUrl).toString(), {
     method: "POST",
     headers,
