@@ -4,7 +4,7 @@ let socket: Socket | null = null;
 
 export const connectSocket = (userId: number) => {
   if (!socket) {
-    socket = io("http://localhost:5000", {
+    socket = io("https://studentapp-dwvm.onrender.com", {
       transports: ["websocket"],
     });
 
@@ -16,6 +16,10 @@ export const connectSocket = (userId: number) => {
     socket.on("disconnect", () => {
       console.log("Socket disconnected");
     });
+    socket.on("connect_error", (err) => {
+  console.log("Socket error:", err.message);
+});
+
   }
 
   return socket;

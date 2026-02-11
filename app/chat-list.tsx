@@ -38,7 +38,7 @@ export default function ChatListScreen() {
       <Pressable
         style={({ pressed }) => [styles.card, pressed && styles.pressed]}
         onPress={() =>
-          router.push({ pathname: "/chat/[id]", params: { id: item.id.toString() } })
+          router.push({pathname: "/chat/[id]",params: { id: `group-${item.id}` },})
         }
       >
         <View style={styles.cardRow}>
