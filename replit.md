@@ -90,6 +90,7 @@ users, courses, modules, lessons, enrollments, assignments, submissions, quizzes
 - Roadmaps: GET/POST /api/roadmaps, GET /api/roadmaps/user/:userId
 - Roadmap Items: POST /api/roadmap-items, PUT /api/roadmap-items/:id, DELETE /api/roadmap-items/:id
 - Users: GET /api/users (admin, excludes passwords)
+- Submissions: GET /api/all-submissions (role-based), GET /api/my-submissions, GET /api/user-submissions/:userId, PUT /api/submissions/:id/review
 - Reports: GET /api/admin/stats
 
 ## Recent Changes (Feb 2026)
@@ -120,3 +121,8 @@ users, courses, modules, lessons, enrollments, assignments, submissions, quizzes
 - Admin roadmap detail refetches fresh data after unlock/complete actions
 - Chat messages ordered DESC for inverted FlatList compatibility
 - Groups API includes memberCount in response
+- Added admin-submissions.tsx: view all student submissions, review with marks/feedback, filter by status
+- Added student-submissions.tsx: view own submissions with status, marks, feedback, progress bars
+- Added submission API routes: /api/all-submissions, /api/my-submissions, /api/user-submissions/:userId
+- Submission creation defaults status to "submitted"
+- Review flow: admin submits marks/feedback → status changes to "reviewed" → notification sent → leaderboard updated
