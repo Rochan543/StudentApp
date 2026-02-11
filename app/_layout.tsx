@@ -41,6 +41,8 @@ function RootLayoutNav() {
       <Stack.Screen name="student-leave" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="student-roadmap" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="student-attendance" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="admin-submissions" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="student-submissions" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
