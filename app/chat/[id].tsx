@@ -201,7 +201,9 @@ export default function ChatScreen() {
         <FlatList
           ref={listRef}
           data={messages || []}
-          keyExtractor={(item: any) => item.id.toString()}
+          keyExtractor={(item: any, index: number) =>
+            item?.id ? item.id.toString() : index.toString()
+          }
           contentContainerStyle={styles.messageList}
           renderItem={({ item }: any) => {
             const isMe = item.senderId === user?.id;
