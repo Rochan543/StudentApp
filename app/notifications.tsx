@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,9 +18,13 @@ import { apiGet, apiPut } from "@/lib/api";
 import Colors from "@/constants/colors";
 
 export default function NotificationsScreen() {
+
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+
+  // ✅ ADDED
+  const [incomingCall, setIncomingCall] = useState<any>(null);
 
   const { data: notifications, isLoading, refetch } = useQuery({
     queryKey: ["notifications"],
@@ -44,6 +49,17 @@ export default function NotificationsScreen() {
     queryClient.invalidateQueries({ queryKey: ["unread-count"] });
   }
 
+  // ✅ ADDED
+  function acceptCall() {
+    setIncomingCall(null);
+    router.push("/meetings");
+  }
+
+  // ✅ ADDED
+  function rejectCall() {
+    setIncomingCall(null);
+  }
+
   function getIcon(type: string) {
     switch (type) {
       case "success": return { name: "checkmark-circle" as const, color: Colors.success };
@@ -66,6 +82,39 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
+
+      {/* 🔔 RINGING MODAL */}
+      <Modal visible={!!incomingCall} transparent animationType="slide">
+        <View style={styles.ringOverlay}>
+          <View style={styles.ringBox}>
+
+            <Ionicons name="call" size={64} color={Colors.primary} />
+
+            <Text style={styles.ringTitle}>Incoming Call</Text>
+
+            <Text style={styles.ringSub}>
+              {incomingCall?.title}
+            </Text>
+
+            <View style={styles.callButtons}>
+
+              <Pressable style={styles.rejectBtn} onPress={rejectCall}>
+                <Ionicons name="close" size={26} color="#fff" />
+                <Text style={styles.callBtnText}>Reject</Text>
+              </Pressable>
+
+              <Pressable style={styles.acceptBtn} onPress={acceptCall}>
+                <Ionicons name="checkmark" size={26} color="#fff" />
+                <Text style={styles.callBtnText}>Accept</Text>
+              </Pressable>
+
+            </View>
+
+          </View>
+        </View>
+      </Modal>
+
+      {/* HEADER */}
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12 }]}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
@@ -96,18 +145,32 @@ export default function NotificationsScreen() {
             </View>
           }
           renderItem={({ item }) => {
+
             const icon = getIcon(item.type);
 
             return (
               <Pressable
                 style={[styles.notifCard, !item.isRead && styles.notifCardUnread]}
-                onPress={() => !item.isRead && markRead(item.id)}
+                onPress={() => {
+
+                  if (!item.isRead) {
+                    markRead(item.id);
+                  }
+
+                  // ✅ SHOW RINGING
+                  if (item.type === "call") {
+                    setIncomingCall(item);
+                  }
+
+                }}
               >
+
                 <View style={[styles.notifIcon, { backgroundColor: `${icon.color}15` }]}>
                   <Ionicons name={icon.name} size={22} color={icon.color} />
                 </View>
 
                 <View style={styles.notifContent}>
+
                   <Text style={[styles.notifTitle, !item.isRead && styles.notifTitleUnread]}>
                     {item.title}
                   </Text>
@@ -116,12 +179,25 @@ export default function NotificationsScreen() {
                     {item.message}
                   </Text>
 
+                  {item.type === "call" && (
+                    <Pressable
+                      onPress={() => setIncomingCall(item)}
+                      style={{ marginTop: 6 }}
+                    >
+                      <Text style={{ color: Colors.primary, fontWeight: "600" }}>
+                        Join Now
+                      </Text>
+                    </Pressable>
+                  )}
+
                   <Text style={styles.notifTime}>
                     {timeAgo(item.createdAt)}
                   </Text>
+
                 </View>
 
                 {!item.isRead && <View style={styles.unreadDot} />}
+
               </Pressable>
             );
           }}
@@ -131,7 +207,10 @@ export default function NotificationsScreen() {
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
+
   container: { flex: 1, backgroundColor: Colors.background },
 
   header: {
@@ -227,4 +306,64 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
   },
+
+  /* 🔔 CALL UI */
+
+  ringOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  ringBox: {
+    backgroundColor: "#fff",
+    width: "85%",
+    borderRadius: 20,
+    padding: 25,
+    alignItems: "center",
+  },
+
+  ringTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginTop: 12,
+  },
+
+  ringSub: {
+    marginTop: 6,
+    color: "#666",
+  },
+
+  callButtons: {
+    flexDirection: "row",
+    marginTop: 25,
+    gap: 20,
+  },
+
+  rejectBtn: {
+    backgroundColor: "#ef4444",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  acceptBtn: {
+    backgroundColor: "#22c55e",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  callBtnText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
 });

@@ -77,22 +77,36 @@ export default function ChatScreen() {
   }, [groupId]);
 
   // ================= LISTEN SOCKET =================
-  useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
+  // ================= LISTEN SOCKET =================
+useEffect(() => {
+  const socket = getSocket();
+  if (!socket) return;
 
-    const refresh = () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", id] });
-    };
+  const handlePrivateMessage = (msg: any) => {
+    if (!groupId) {
+      queryClient.setQueryData(["messages", id], (old: any[] = []) => {
+        return [...old, msg];
+      });
+    }
+  };
 
-    socket.on("new-message", refresh);
-    socket.on("new-group-message", refresh);
+  const handleGroupMessage = (msg: any) => {
+    if (groupId) {
+      queryClient.setQueryData(["messages", id], (old: any[] = []) => {
+        return [...old, msg];
+      });
+    }
+  };
 
-    return () => {
-      socket.off("new-message", refresh);
-      socket.off("new-group-message", refresh);
-    };
-  }, [id]);
+  socket.on("new-message", handlePrivateMessage);
+  socket.on("new-group-message", handleGroupMessage);
+
+  return () => {
+    socket.off("new-message", handlePrivateMessage);
+    socket.off("new-group-message", handleGroupMessage);
+  };
+}, [id, groupId]);
+
 
   // ================= SEND MESSAGE =================
   const sendMessage = useCallback(() => {

@@ -4,6 +4,8 @@ import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
 import dotenv from "dotenv";
+import { storage } from "./storage";
+
 
 /* 🔹 ADDED */
 import { createServer } from "http";
@@ -278,22 +280,32 @@ function validateEnv() {
 
   // send message
   socket.on("send-message", async (data) => {
-    try {
-      // private chat
-      if (data.receiverId) {
-        io.to(`user-${data.receiverId}`).emit("new-message", data);
-        io.to(`user-${data.senderId}`).emit("new-message", data);
-      }
+  try {
 
-      // group chat
-      if (data.groupId) {
-        io.to(`group-${data.groupId}`).emit("new-group-message", data);
-      }
+    // 🔹 SAVE TO DATABASE FIRST
+    const msg = await storage.createMessage({
+      senderId: data.senderId,
+      receiverId: data.receiverId || null,
+      groupId: data.groupId || null,
+      content: data.content,
+    });
 
-    } catch (err) {
-      console.error("Socket send-message error:", err);
+    // 🔹 PRIVATE CHAT
+    if (data.receiverId) {
+      io.to(`user-${data.receiverId}`).emit("new-message", msg);
+      io.to(`user-${data.senderId}`).emit("new-message", msg);
     }
-  });
+
+    // 🔹 GROUP CHAT
+    if (data.groupId) {
+      io.to(`group-${data.groupId}`).emit("new-group-message", msg);
+    }
+
+  } catch (err) {
+    console.error("Socket send-message error:", err);
+  }
+});
+
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected:", socket.id);
