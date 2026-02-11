@@ -464,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updated = await storage.updateSubmission(existing.id, { content: req.body.content, fileUrl: req.body.fileUrl, status: "submitted", submittedAt: new Date() });
         return res.json(updated);
       }
-      const submission = await storage.createSubmission({ ...req.body, userId: req.user!.userId });
+      const submission = await storage.createSubmission({ ...req.body, userId: req.user!.userId, status: "submitted" });
       res.json(submission);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -479,6 +479,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const sub = await storage.getSubmissionByUser(paramId(req.params.assignmentId), req.user!.userId);
       res.json(sub || null);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/all-submissions", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      if (req.user!.role === "admin") {
+        const subs = await storage.getAllSubmissions();
+        return res.json(subs);
+      }
+      const subs = await storage.getSubmissionsByUser(req.user!.userId);
+      res.json(subs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/my-submissions", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const subs = await storage.getSubmissionsByUser(req.user!.userId);
+      res.json(subs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/user-submissions/:userId", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const subs = await storage.getUserSubmissions(paramId(req.params.userId));
+      res.json(subs);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

@@ -154,8 +154,8 @@ export const storage = {
     await db.delete(schema.assignments).where(eq(schema.assignments.id, id));
   },
 
-  async createSubmission(data: { assignmentId: number; userId: number; content?: string; fileUrl?: string }) {
-    const [s] = await db.insert(schema.submissions).values(data).returning();
+  async createSubmission(data: { assignmentId: number; userId: number; content?: string; fileUrl?: string; status?: string }) {
+    const [s] = await db.insert(schema.submissions).values({ ...data, status: data.status || "submitted" }).returning();
     return s;
   },
 
@@ -660,6 +660,37 @@ export const storage = {
     return db.select().from(schema.meetings)
       .where(sql`(${sql.join(conditions, sql` OR `)})`)
       .orderBy(desc(schema.meetings.scheduledAt));
+  },
+
+  async getAllSubmissions() {
+    return db.select({
+      submission: schema.submissions,
+      user: { id: schema.users.id, name: schema.users.name, email: schema.users.email },
+      assignment: { id: schema.assignments.id, title: schema.assignments.title, maxMarks: schema.assignments.maxMarks, courseId: schema.assignments.courseId },
+    }).from(schema.submissions)
+      .innerJoin(schema.users, eq(schema.submissions.userId, schema.users.id))
+      .innerJoin(schema.assignments, eq(schema.submissions.assignmentId, schema.assignments.id))
+      .orderBy(desc(schema.submissions.submittedAt));
+  },
+
+  async getSubmissionsByUser(userId: number) {
+    return db.select({
+      submission: schema.submissions,
+      assignment: { id: schema.assignments.id, title: schema.assignments.title, maxMarks: schema.assignments.maxMarks, courseId: schema.assignments.courseId },
+    }).from(schema.submissions)
+      .innerJoin(schema.assignments, eq(schema.submissions.assignmentId, schema.assignments.id))
+      .where(eq(schema.submissions.userId, userId))
+      .orderBy(desc(schema.submissions.submittedAt));
+  },
+
+  async getUserSubmissions(userId: number) {
+    return db.select({
+      submission: schema.submissions,
+      assignment: { id: schema.assignments.id, title: schema.assignments.title, maxMarks: schema.assignments.maxMarks, courseId: schema.assignments.courseId },
+    }).from(schema.submissions)
+      .innerJoin(schema.assignments, eq(schema.submissions.assignmentId, schema.assignments.id))
+      .where(eq(schema.submissions.userId, userId))
+      .orderBy(desc(schema.submissions.submittedAt));
   },
 
   async getQuestionsByQuizAndSet(quizId: number, questionSet?: string) {

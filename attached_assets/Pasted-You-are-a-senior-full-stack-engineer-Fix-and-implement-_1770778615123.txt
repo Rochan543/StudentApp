@@ -1,0 +1,66 @@
+You are a senior full-stack engineer.
+
+Fix and implement the following issues exactly as described.
+
+---------------------------------------------------
+0. SUBMISSION PAGES NOT CREATED
+---------------------------------------------------
+Submission pages are not created in both admin panel and user panel.
+
+Fix:
+
+- Create submission page in admin panel.
+- Create submission page in user panel.
+
+---------------------------------------------------
+1. ASSIGNMENT SUBMISSION VISIBILITY
+---------------------------------------------------
+User submits assignment and uploads file.
+
+Problems:
+
+- Nothing is visible in admin panel submissions.
+- User panel does not show proper submission status.
+
+Fix:
+
+- When user submits assignment:
+    - Status must change to SUBMITTED.
+    - User panel must show "You submitted this assignment".
+- Submission record must save in database.
+- Submission must appear in admin panel.
+
+---------------------------------------------------
+2. ADMIN VIEW & EVALUATE SUBMISSIONS
+---------------------------------------------------
+Admin must be able to:
+
+- See list of student submissions.
+- See user name.
+- When clicking user name it should open all assignments of that user.
+- Open submitted file (PDF).
+- View answers.
+- Evaluate submission.
+- Mark task as completed.
+- Award marks.
+
+---------------------------------------------------
+3. CLOUDINARY STORAGE
+---------------------------------------------------
+- Submission files must be stored in Cloudinary.
+- Database must store Cloudinary file URL.
+- Admin must have option to view the file inside admin panel.
+- Admin awards marks and feedback.
+- After awarding marks and feedback:
+    - Submission must be marked as DONE in admin panel.
+    - User must receive notification.
+    - User must see feedback and awarded marks in user panel.
+
+---------------------------------------------------
+FINAL EXPECTATION
+---------------------------------------------------
+All above functionalities should work properly without any fail.
+
+Fix ONLY these items.
+Do NOT add new features.
+Do NOT redesign UI.
