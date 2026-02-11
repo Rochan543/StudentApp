@@ -181,9 +181,10 @@ export default function NotificationsScreen() {
 
                   {item.type === "call" && (
                     <Pressable
-                      onPress={() => setIncomingCall(item)}
+                      onPress={() => router.push("/call")}
                       style={{ marginTop: 6 }}
                     >
+
                       <Text style={{ color: Colors.primary, fontWeight: "600" }}>
                         Join Now
                       </Text>

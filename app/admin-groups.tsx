@@ -147,51 +147,116 @@ export default function AdminGroupsScreen() {
     return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
-  function renderGroup({ item }: { item: any }) {
-    const memberCount = item.memberCount || item._count?.members || 0;
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconContainer, { backgroundColor: Colors.accentLight + "40" }]}>
-            <Ionicons name="chatbubbles" size={18} color={Colors.accent} />
+  // function renderGroup({ item }: { item: any }) {
+  //   const memberCount = item.memberCount || item._count?.members || 0;
+  //   return (
+  //     <View style={styles.card}>
+  //       <View style={styles.cardHeader}>
+  //         <View style={[styles.iconContainer, { backgroundColor: Colors.accentLight + "40" }]}>
+  //           <Ionicons name="chatbubbles" size={18} color={Colors.accent} />
+  //         </View>
+  //         <View style={{ flex: 1 }}>
+  //           <Text style={styles.groupName}>{item.name}</Text>
+  //           {item.description ? (
+  //             <Text style={styles.groupDescription} numberOfLines={2}>{item.description}</Text>
+  //           ) : null}
+  //         </View>
+  //         <Pressable testID="delete-group-button" onPress={() => handleDelete(item.id, item.name)}>
+  //           <Ionicons name="trash-outline" size={18} color={Colors.error} />
+  //         </Pressable>
+  //       </View>
+  //       <View style={styles.cardFooter}>
+  //         <View style={styles.footerLeft}>
+  //           <View style={styles.metaRow}>
+  //             <Ionicons name="people-outline" size={14} color={Colors.textTertiary} />
+  //             <Text style={styles.metaText}>{memberCount} members</Text>
+  //           </View>
+  //         </View>
+  //         <View style={styles.footerActions}>
+  //           <Pressable onPress={() => startCall(item.id, item.name, "voice")} style={styles.callBtn}>
+  //             <Ionicons name="call-outline" size={16} color={Colors.success} />
+  //           </Pressable>
+  //           <Pressable onPress={() => startCall(item.id, item.name, "video")} style={styles.callBtn}>
+  //             <Ionicons name="videocam-outline" size={16} color={Colors.info} />
+  //           </Pressable>
+  //           <Pressable
+  //             testID="members-button"
+  //             style={styles.membersBtn}
+  //             onPress={() => openMembers(item)}
+  //           >
+  //             <Ionicons name="person-add-outline" size={14} color={Colors.primary} />
+  //             <Text style={styles.membersBtnText}>Members</Text>
+  //           </Pressable>
+  //         </View>
+  //       </View>
+  //     </View>
+  //   );
+  // }
+  // ONLY CHANGE: renderGroup card wrapper converted to Pressable
+
+function renderGroup({ item }: { item: any }) {
+  const memberCount = item.memberCount || item._count?.members || 0;
+
+  return (
+    <Pressable
+      style={styles.card}
+      onPress={() =>
+        router.push({
+          pathname: "/chat/[id]",
+          params: { id: `group-${item.id}` },
+        })
+      }
+    >
+      <View style={styles.cardHeader}>
+        <View style={[styles.iconContainer, { backgroundColor: Colors.accentLight + "40" }]}>
+          <Ionicons name="chatbubbles" size={18} color={Colors.accent} />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={styles.groupName}>{item.name}</Text>
+          {item.description ? (
+            <Text style={styles.groupDescription} numberOfLines={2}>
+              {item.description}
+            </Text>
+          ) : null}
+        </View>
+
+        <Pressable testID="delete-group-button" onPress={() => handleDelete(item.id, item.name)}>
+          <Ionicons name="trash-outline" size={18} color={Colors.error} />
+        </Pressable>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <View style={styles.footerLeft}>
+          <View style={styles.metaRow}>
+            <Ionicons name="people-outline" size={14} color={Colors.textTertiary} />
+            <Text style={styles.metaText}>{memberCount} members</Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.groupName}>{item.name}</Text>
-            {item.description ? (
-              <Text style={styles.groupDescription} numberOfLines={2}>{item.description}</Text>
-            ) : null}
-          </View>
-          <Pressable testID="delete-group-button" onPress={() => handleDelete(item.id, item.name)}>
-            <Ionicons name="trash-outline" size={18} color={Colors.error} />
+        </View>
+
+        <View style={styles.footerActions}>
+          <Pressable onPress={() => startCall(item.id, item.name, "voice")} style={styles.callBtn}>
+            <Ionicons name="call-outline" size={16} color={Colors.success} />
+          </Pressable>
+
+          <Pressable onPress={() => startCall(item.id, item.name, "video")} style={styles.callBtn}>
+            <Ionicons name="videocam-outline" size={16} color={Colors.info} />
+          </Pressable>
+
+          <Pressable
+            testID="members-button"
+            style={styles.membersBtn}
+            onPress={() => openMembers(item)}
+          >
+            <Ionicons name="person-add-outline" size={14} color={Colors.primary} />
+            <Text style={styles.membersBtnText}>Members</Text>
           </Pressable>
         </View>
-        <View style={styles.cardFooter}>
-          <View style={styles.footerLeft}>
-            <View style={styles.metaRow}>
-              <Ionicons name="people-outline" size={14} color={Colors.textTertiary} />
-              <Text style={styles.metaText}>{memberCount} members</Text>
-            </View>
-          </View>
-          <View style={styles.footerActions}>
-            <Pressable onPress={() => startCall(item.id, item.name, "voice")} style={styles.callBtn}>
-              <Ionicons name="call-outline" size={16} color={Colors.success} />
-            </Pressable>
-            <Pressable onPress={() => startCall(item.id, item.name, "video")} style={styles.callBtn}>
-              <Ionicons name="videocam-outline" size={16} color={Colors.info} />
-            </Pressable>
-            <Pressable
-              testID="members-button"
-              style={styles.membersBtn}
-              onPress={() => openMembers(item)}
-            >
-              <Ionicons name="person-add-outline" size={14} color={Colors.primary} />
-              <Text style={styles.membersBtnText}>Members</Text>
-            </Pressable>
-          </View>
-        </View>
       </View>
-    );
-  }
+    </Pressable>
+  );
+}
+
 
   return (
     <View style={styles.container}>

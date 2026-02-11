@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -30,6 +30,8 @@ export default function ChatScreen() {
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   const [message, setMessage] = useState("");
+
+  const listRef = useRef<FlatList>(null);
 
   // ✅ GROUP CHAT DETECTION
   const isGroupChat = id?.startsWith("group-");
@@ -66,47 +68,53 @@ export default function ChatScreen() {
     connectSocket(user.id);
   }, [user?.id]);
 
-  // ✅ JOIN GROUP ROOM (WAIT FOR SOCKET)
+  // ✅ JOIN GROUP ROOM
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    if (groupId) {
+    if (groupId && user?.id) {
       socket.emit("join-group", groupId);
     }
-  }, [groupId]);
+  }, [groupId, user?.id]);
 
   // ================= LISTEN SOCKET =================
-  // ================= LISTEN SOCKET =================
-useEffect(() => {
-  const socket = getSocket();
-  if (!socket) return;
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
 
-  const handlePrivateMessage = (msg: any) => {
-    if (!groupId) {
-      queryClient.setQueryData(["messages", id], (old: any[] = []) => {
-        return [...old, msg];
-      });
-    }
-  };
+    const handlePrivateMessage = (msg: any) => {
+      if (!groupId) {
+        queryClient.setQueryData(["messages", id], (old: any[] = []) => {
+          const updated = [...old, msg];
+          setTimeout(() => {
+            listRef.current?.scrollToEnd({ animated: true });
+          }, 50);
+          return updated;
+        });
+      }
+    };
 
-  const handleGroupMessage = (msg: any) => {
-    if (groupId) {
-      queryClient.setQueryData(["messages", id], (old: any[] = []) => {
-        return [...old, msg];
-      });
-    }
-  };
+    const handleGroupMessage = (msg: any) => {
+      if (groupId) {
+        queryClient.setQueryData(["messages", id], (old: any[] = []) => {
+          const updated = [...old, msg];
+          setTimeout(() => {
+            listRef.current?.scrollToEnd({ animated: true });
+          }, 50);
+          return updated;
+        });
+      }
+    };
 
-  socket.on("new-message", handlePrivateMessage);
-  socket.on("new-group-message", handleGroupMessage);
+    socket.on("new-message", handlePrivateMessage);
+    socket.on("new-group-message", handleGroupMessage);
 
-  return () => {
-    socket.off("new-message", handlePrivateMessage);
-    socket.off("new-group-message", handleGroupMessage);
-  };
-}, [id, groupId]);
-
+    return () => {
+      socket.off("new-message", handlePrivateMessage);
+      socket.off("new-group-message", handleGroupMessage);
+    };
+  }, [id, groupId]);
 
   // ================= SEND MESSAGE =================
   const sendMessage = useCallback(() => {
@@ -190,6 +198,7 @@ useEffect(() => {
         <ActivityIndicator size="large" color={Colors.primary} />
       ) : (
         <FlatList
+          ref={listRef}
           data={messages || []}
           keyExtractor={(item: any) => item.id.toString()}
           contentContainerStyle={styles.messageList}
