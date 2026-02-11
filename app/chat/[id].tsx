@@ -19,6 +19,7 @@ import { apiGet, apiPost } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
+import { getSocket, connectSocket } from "@/lib/socket";
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,25 +48,52 @@ export default function ChatScreen() {
     queryKey: ["messages", id],
     queryFn: () => apiGet(`/api/messages/${id}`),
     enabled: !isChatList && !!partnerId,
-    refetchInterval: 3000,
   });
 
   const partner = chatList?.find((p: any) => p.id === partnerId);
+  // 🔌 Connect socket when user loads chat
+React.useEffect(() => {
+  if (!user?.id) return;
+  connectSocket(user.id);
+}, [user?.id]);
 
-  const sendMessage = useCallback(async () => {
-    if (!message.trim() || sending) return;
-    setSending(true);
-    try {
-      await apiPost("/api/messages", { receiverId: partnerId, content: message.trim() });
-      setMessage("");
-      queryClient.invalidateQueries({ queryKey: ["messages", id] });
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSending(false);
-    }
-  }, [message, partnerId]);
+// 📩 Listen for incoming messages
+React.useEffect(() => {
+  const socket = getSocket();
+
+  socket?.on("new-message", () => {
+    queryClient.invalidateQueries({ queryKey: ["messages", id] });
+  });
+
+  return () => {
+    socket?.off("new-message");
+  };
+}, [id]);
+
+
+const sendMessage = useCallback(async () => {
+  if (!message.trim() || sending) return;
+
+  setSending(true);
+
+  try {
+    const socket = getSocket();
+
+    socket?.emit("send-message", {
+      senderId: user?.id,
+      receiverId: partnerId,
+      content: message.trim(),
+    });
+
+    setMessage("");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setSending(false);
+  }
+}, [message, partnerId, user?.id]);
 
   if (isChatList) {
     const users = user?.role === "admin" ? (allUsers || chatList || []) : (chatList || []);
