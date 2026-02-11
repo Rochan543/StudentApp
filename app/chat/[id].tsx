@@ -154,7 +154,8 @@ export default function ChatScreen() {
         ) : (
           <FlatList
             data={chatList || []}
-            keyExtractor={(item: any) => item.id.toString()}
+            keyExtractor={(item: any, index: number) =>
+            item.id ? item.id.toString() : index.toString()}
             refreshControl={
               <RefreshControl refreshing={false} onRefresh={refetchList} />
             }
