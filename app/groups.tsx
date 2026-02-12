@@ -33,6 +33,9 @@ export default function GroupsScreen() {
   const { data: groups, isLoading, refetch } = useQuery({
     queryKey: ["groups"],
     queryFn: () => apiGet<Group[]>("/api/groups"),
+      staleTime: 0,
+      refetchOnMount: true,
+    
   });
 
   function handleCall(groupName: string) {

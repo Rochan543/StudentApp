@@ -16,10 +16,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth-context";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
+import { useQueryClient } from "@tanstack/react-query";
+
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -38,6 +41,7 @@ export default function LoginScreen() {
     try {
       const userData = await login(email.trim(), password);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await queryClient.clear();   // ✅ VERY IMPORTANT
       if (userData.role === "admin") {
         router.replace("/(admin)");
       } else {
