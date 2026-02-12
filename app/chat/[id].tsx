@@ -62,6 +62,7 @@ export default function ChatScreen() {
     ? apiGet(`/api/messages/group/${groupId}`)
     : apiGet(`/api/messages/${id}`),
       enabled: !isChatList && !!id,
+      placeholderData: (previousData) => previousData,
     });
 
   const partner = chatList?.find((p: any) => p.id === partnerId);
