@@ -62,7 +62,7 @@ export default function ChatScreen() {
     ? apiGet(`/api/messages/group/${groupId}`)
     : apiGet(`/api/messages/${id}`),
       enabled: !isChatList && !!id,
-      placeholderData: (previousData) => previousData,
+      // placeholderData: (previousData) => previousData,
     });
 
   const partner = chatList?.find((p: any) => p.id === partnerId);
@@ -90,38 +90,31 @@ export default function ChatScreen() {
 
     const handlePrivateMessage = (msg: any) => {
   if (!groupId) {
-    queryClient.setQueryData(["messages", id], (old: any[] = []) => {
 
-      // ✅ prevent duplicate
+    // ✅ ignore my own socket echo
+    if (msg.senderId === user?.id) return;
+
+    queryClient.setQueryData(["messages", id], (old: any[] = []) => {
       const exists = old.find((m) => m.id === msg.id);
       if (exists) return old;
 
-      const updated = [...old, msg];
-
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-      }, 50);
-
-      return updated;
+      return [...old, msg];
     });
   }
 };
 
-    const handleGroupMessage = (msg: any) => {
-  if (groupId) {
-    queryClient.setQueryData(["messages", id], (old: any[] = []) => {
 
-      // ✅ prevent duplicate
+const handleGroupMessage = (msg: any) => {
+  if (groupId) {
+
+    // ✅ ignore my own socket echo
+    if (msg.senderId === user?.id) return;
+
+    queryClient.setQueryData(["messages", id], (old: any[] = []) => {
       const exists = old.find((m) => m.id === msg.id);
       if (exists) return old;
 
-      const updated = [...old, msg];
-
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-      }, 50);
-
-      return updated;
+      return [...old, msg];
     });
   }
 };
