@@ -1,9 +1,9 @@
 import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "node:http";
+// import { createServer, type Server } from "node:http";
 import { storage } from "./storage";
 import { hashPassword, comparePassword, generateTokens, generateToken, verifyToken, authMiddleware, adminMiddleware } from "./auth";
 import { registerSchema, loginSchema } from "@shared/schema";
-import { Server as SocketServer } from "socket.io";
+// import { Server as SocketServer } from "socket.io";
 import rateLimit from "express-rate-limit";
 import { uploadImage, uploadDocument, uploadAny, uploadToCloudinary, type CloudinaryFolder } from "./cloudinary";
 
@@ -38,41 +38,8 @@ async function seedAdminUser() {
   }
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  const httpServer = createServer(app);
+export async function registerRoutes(app: Express): Promise<void> {
 
-  await seedAdminUser();
-
-  const io = new SocketServer(httpServer, {
-    cors: { origin: "*", methods: ["GET", "POST"] },
-  });
-  app.set("io", io);
-
-
-  io.on("connection", (socket) => {
-    socket.on("join-group", (groupId: number) => {
-  socket.join(`group-${groupId}`);
-});
-
-    socket.on("join", (userId: number) => {
-      socket.join(`user-${userId}`);
-    });
-
-    socket.on("send-message", async (data: { senderId: number; receiverId?: number; groupId?: number; content: string }) => {
-      const msg = await storage.createMessage(data);
-      if (data.receiverId) {
-        io.to(`user-${data.receiverId}`).emit("new-message", msg);
-        io.to(`user-${data.senderId}`).emit("new-message", msg);
-      }
-      // if (data.groupId) {
-      //   io.emit(`group-${data.groupId}`, msg);
-      // }
-          if (data.groupId) {
-      io.to(`group-${data.groupId}`).emit("new-group-message", msg);
-    }
-
-    });
-  });
 
   app.post("/api/auth/register", loginLimiter, async (req: Request, res: Response) => {
     try {
@@ -982,21 +949,37 @@ app.get("/api/messages/group/:groupId", authMiddleware, async (req: Request, res
   }
 });
 
+   app.get("/api/groups", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
 
-  app.get("/api/groups", authMiddleware, async (_req: Request, res: Response) => {
-    try {
-      const groups = await storage.getGroups();
-      const groupsWithCount = await Promise.all(
-        groups.map(async (g) => {
-          const members = await storage.getGroupMembers(g.id);
-          return { ...g, memberCount: members.length };
-        })
+    const groups = await storage.getGroups();
+
+    const visibleGroups = [];
+
+    for (const g of groups) {
+      const members = await storage.getGroupMembers(g.id);
+
+      const isMember = members.some(
+        (m: any) => m.userId === userId || m.id === userId
       );
-      res.json(groupsWithCount);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
+
+      const isPublic = members.length === 1; // only creator exists
+
+      if (isMember || isPublic) {
+        visibleGroups.push({
+          ...g,
+          memberCount: members.length,
+        });
+      }
     }
-  });
+
+    res.json(visibleGroups);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
   app.post("/api/groups", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
@@ -1009,23 +992,27 @@ app.get("/api/messages/group/:groupId", authMiddleware, async (req: Request, res
   });
 
   // Group Member routes
-  app.post("/api/groups/:id/members", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
-    try {
-      const groupId = paramId(req.params.id);
-      const { userId } = req.body;
-      await storage.addGroupMember({ groupId, userId: req.user!.userId });
-      const member = await storage.addGroupMember({ groupId, userId });
-      await storage.createNotification({
-        userId,
-        title: "Added to Group",
-        message: `You have been added to a group`,
-        type: "info",
-      });
-      res.json(member);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
+
+  app.post("/api/groups/:id/members", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const groupId = paramId(req.params.id);
+    const { userId } = req.body;
+
+    const member = await storage.addGroupMember({ groupId, userId });
+
+    await storage.createNotification({
+      userId,
+      title: "Added to Group",
+      message: "You have been added to a private group",
+      type: "info",
+    });
+
+    res.json(member);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
   app.delete("/api/groups/:id/members/:userId", authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
@@ -1345,5 +1332,4 @@ app.get("/api/messages/group/:groupId", authMiddleware, async (req: Request, res
     }
   });
 
-  return httpServer;
 }
