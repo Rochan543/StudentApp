@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApiUrl } from "./query-client";
 import { fetch } from "expo/fetch";
+import { disconnectSocket } from "./socket";
+
 
 interface User {
   id: number;
@@ -142,8 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await clearTokens();
-  }
+  disconnectSocket();
+  await clearTokens();
+}
+
 
   async function refreshUser() {
     const currentToken = await AsyncStorage.getItem("auth_token");

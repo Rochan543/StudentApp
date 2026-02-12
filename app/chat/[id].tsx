@@ -92,7 +92,7 @@ export default function ChatScreen() {
   if (!groupId) {
 
     // ✅ ignore my own socket echo
-    if (msg.senderId === user?.id) return;
+    // if (msg.senderId === user?.id) return;
 
     queryClient.setQueryData(["messages", id], (old: any[] = []) => {
       const exists = old.find((m) => m.id === msg.id);
@@ -108,7 +108,7 @@ const handleGroupMessage = (msg: any) => {
   if (groupId) {
 
     // ✅ ignore my own socket echo
-    if (msg.senderId === user?.id) return;
+    // if (msg.senderId === user?.id) return;
 
     queryClient.setQueryData(["messages", id], (old: any[] = []) => {
       const exists = old.find((m) => m.id === msg.id);
@@ -143,8 +143,8 @@ const handleGroupMessage = (msg: any) => {
 
 
     return () => {
-      socket.off("new-message", handlePrivateMessage);
-      socket.off("new-group-message", handleGroupMessage);
+      socket.removeAllListeners("new-message");
+      socket.removeAllListeners("new-group-message");
       socket.off("user-online");
       socket.off("user-offline");
       socket.off("typing");

@@ -302,30 +302,18 @@ socket.on("stop-typing", () => {
   socket.on("send-message", async (data) => {
   try {
 
-    // 🔹 SAVE TO DATABASE FIRST
-    const sender = await storage.getUserById(data.senderId);
-
-        // 2️⃣ Save message
-    const saved = await storage.createMessage({
-      senderId: data.senderId,
-      receiverId: data.receiverId || null,
-      groupId: data.groupId || null,
-      content: data.content,
-    });
-
-
     const msg = await storage.createMessage({
-      senderId: data.senderId,
-      receiverId: data.receiverId || null,
-      groupId: data.groupId || null,
-      content: data.content,
-    });
+    senderId: data.senderId,
+    receiverId: data.receiverId || null,
+    groupId: data.groupId || null,
+    content: data.content,
+  });
 
     // 🔹 PRIVATE CHAT
     if (data.receiverId) {
-      io.to(`user-${data.receiverId}`).emit("new-message", msg);
-      io.to(`user-${data.senderId}`).emit("new-message", msg);
-    }
+  io.to(`user-${data.receiverId}`).emit("new-message", msg);
+}
+
 
     // 🔹 GROUP CHAT
     if (data.groupId) {

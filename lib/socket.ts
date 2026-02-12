@@ -26,3 +26,10 @@ export const connectSocket = (userId: number) => {
 };
 
 export const getSocket = () => socket;
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+};
+
