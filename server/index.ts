@@ -268,10 +268,30 @@ function validateEnv() {
   io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
 
+  socket.on("typing", (data) => {
+  if (data.groupId) {
+    socket.to(`group-${data.groupId}`).emit("typing", data.senderName);
+  } else {
+    socket.to(`user-${data.receiverId}`).emit("typing", data.senderName);
+  }
+});
+
+socket.on("stop-typing", () => {
+  socket.broadcast.emit("stop-typing");
+});
+
+
   // join personal room
-  socket.on("join", (userId) => {
+  // socket.on("join", (userId) => {
+  //   socket.join(`user-${userId}`);
+  // });
+    socket.on("join", (userId) => {
+    socket.data.userId = userId;          // store user id
     socket.join(`user-${userId}`);
+
+    socket.broadcast.emit("user-online", userId);
   });
+
 
   // join group room
   socket.on("join-group", (groupId) => {
@@ -283,6 +303,17 @@ function validateEnv() {
   try {
 
     // 🔹 SAVE TO DATABASE FIRST
+    const sender = await storage.getUserById(data.senderId);
+
+        // 2️⃣ Save message
+    const saved = await storage.createMessage({
+      senderId: data.senderId,
+      receiverId: data.receiverId || null,
+      groupId: data.groupId || null,
+      content: data.content,
+    });
+
+
     const msg = await storage.createMessage({
       senderId: data.senderId,
       receiverId: data.receiverId || null,
@@ -308,6 +339,9 @@ function validateEnv() {
 
 
   socket.on("disconnect", () => {
+    if (socket.data.userId) {
+    socket.broadcast.emit("user-offline", socket.data.userId);
+  }
     console.log("Socket disconnected:", socket.id);
   });
 });

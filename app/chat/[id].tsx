@@ -21,6 +21,7 @@ import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
 import { getSocket, connectSocket } from "@/lib/socket";
 
+
 export default function ChatScreen() {
 
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,6 +31,9 @@ export default function ChatScreen() {
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   const [message, setMessage] = useState("");
+  const [onlineUsers, setOnlineUsers] = useState<number[]>([]);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+
 
   const listRef = useRef<FlatList>(null);
 
@@ -110,9 +114,33 @@ export default function ChatScreen() {
     socket.on("new-message", handlePrivateMessage);
     socket.on("new-group-message", handleGroupMessage);
 
+    // ✅ ADDED
+    socket.on("user-online", (id: number) => {
+      setOnlineUsers((prev) => [...new Set([...prev, id])]);
+    });
+
+    socket.on("user-offline", (id: number) => {
+      setOnlineUsers((prev) => prev.filter((u) => u !== id));
+    });
+
+    socket.on("typing", (name: string) => {
+      setTypingUser(name);
+    });
+
+    socket.on("stop-typing", () => {
+      setTypingUser(null);
+    });
+
+
+
     return () => {
       socket.off("new-message", handlePrivateMessage);
       socket.off("new-group-message", handleGroupMessage);
+      socket.off("user-online");
+      socket.off("user-offline");
+      socket.off("typing");
+      socket.off("stop-typing");
+
     };
   }, [id, groupId]);
 
@@ -190,9 +218,18 @@ export default function ChatScreen() {
           <Ionicons name="arrow-back" size={22} />
         </Pressable>
 
+              <View>
         <Text style={styles.title}>
           {groupId ? "Study Group" : partner?.name || `User ${partnerId}`}
         </Text>
+
+        {!groupId && onlineUsers.includes(partnerId) && (
+          <Text style={{ fontSize: 12, color: "green" }}>
+            Online
+          </Text>
+        )}
+      </View>
+
       </View>
 
       {msgsLoading ? (
@@ -215,9 +252,16 @@ export default function ChatScreen() {
                   isMe ? styles.myMessage : styles.otherMessage,
                 ]}
               >
-                <Text style={{ color: isMe ? "#fff" : "#000" }}>
-                  {item.content}
+                {groupId && !isMe && (
+                <Text style={{ fontSize: 11, color: "#666" }}>
+                  {item.senderName}
                 </Text>
+              )}
+
+              <Text style={{ color: isMe ? "#fff" : "#000" }}>
+                {item.content}
+              </Text>
+
               </View>
             );
           }}
@@ -229,7 +273,17 @@ export default function ChatScreen() {
         <TextInput
           style={styles.input}
           value={message}
-          onChangeText={setMessage}
+          onChangeText={(text) => {
+            setMessage(text);
+
+            const socket = getSocket();
+            socket?.emit("typing", {
+              senderName: user?.name,
+              receiverId: partnerId,
+              groupId,
+            });
+          }}
+
           placeholder="Type message..."
         />
 

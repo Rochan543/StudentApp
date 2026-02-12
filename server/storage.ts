@@ -339,23 +339,63 @@ export const storage = {
     return m;
   },
 
+  // async getMessages(userId1: number, userId2: number) {
+
+  //   return db.select().from(schema.messages)
+  //     .where(
+  //       sql`(${schema.messages.senderId} = ${userId1} AND ${schema.messages.receiverId} = ${userId2}) OR (${schema.messages.senderId} = ${userId2} AND ${schema.messages.receiverId} = ${userId1})`
+  //     )
+  //     .orderBy(desc(schema.messages.createdAt));
+  // },
+
   async getMessages(userId1: number, userId2: number) {
-    return db.select().from(schema.messages)
-      .where(
-        sql`(${schema.messages.senderId} = ${userId1} AND ${schema.messages.receiverId} = ${userId2}) OR (${schema.messages.senderId} = ${userId2} AND ${schema.messages.receiverId} = ${userId1})`
-      )
-      .orderBy(desc(schema.messages.createdAt));
-  },
+  return db.select({
+    id: schema.messages.id,
+    senderId: schema.messages.senderId,
+    receiverId: schema.messages.receiverId,
+    groupId: schema.messages.groupId,
+    content: schema.messages.content,
+    createdAt: schema.messages.createdAt,
+    senderName: schema.users.name,
+  })
+    .from(schema.messages)
+    .innerJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
+    .where(
+      sql`(${schema.messages.senderId} = ${userId1} AND ${schema.messages.receiverId} = ${userId2})
+       OR
+       (${schema.messages.senderId} = ${userId2} AND ${schema.messages.receiverId} = ${userId1})`
+    )
+    .orderBy(asc(schema.messages.createdAt));
+},
+
+
+  // async getGroupMessages(groupId: number) {
+
+  //   return db.select({
+  //     message: schema.messages,
+  //     sender: { id: schema.users.id, name: schema.users.name },
+  //   }).from(schema.messages)
+  //     .innerJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
+  //     .where(eq(schema.messages.groupId, groupId))
+  //     .orderBy(asc(schema.messages.createdAt));
+  // },
 
   async getGroupMessages(groupId: number) {
-    return db.select({
-      message: schema.messages,
-      sender: { id: schema.users.id, name: schema.users.name },
-    }).from(schema.messages)
-      .innerJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
-      .where(eq(schema.messages.groupId, groupId))
-      .orderBy(asc(schema.messages.createdAt));
-  },
+  return db.select({
+    id: schema.messages.id,
+    senderId: schema.messages.senderId,
+    receiverId: schema.messages.receiverId,
+    groupId: schema.messages.groupId,
+    content: schema.messages.content,
+    createdAt: schema.messages.createdAt,
+    senderName: schema.users.name,
+  })
+    .from(schema.messages)
+    .innerJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
+    .where(eq(schema.messages.groupId, groupId))
+    .orderBy(asc(schema.messages.createdAt));
+},
+
 
   async getChatList(userId: number) {
     const sent = await db.select({
