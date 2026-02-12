@@ -89,28 +89,43 @@ export default function ChatScreen() {
     if (!socket) return;
 
     const handlePrivateMessage = (msg: any) => {
-      if (!groupId) {
-        queryClient.setQueryData(["messages", id], (old: any[] = []) => {
-          const updated = [...old, msg];
-          setTimeout(() => {
-            listRef.current?.scrollToEnd({ animated: true });
-          }, 50);
-          return updated;
-        });
-      }
-    };
+  if (!groupId) {
+    queryClient.setQueryData(["messages", id], (old: any[] = []) => {
+
+      // ✅ prevent duplicate
+      const exists = old.find((m) => m.id === msg.id);
+      if (exists) return old;
+
+      const updated = [...old, msg];
+
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+
+      return updated;
+    });
+  }
+};
 
     const handleGroupMessage = (msg: any) => {
-      if (groupId) {
-        queryClient.setQueryData(["messages", id], (old: any[] = []) => {
-          const updated = [...old, msg];
-          setTimeout(() => {
-            listRef.current?.scrollToEnd({ animated: true });
-          }, 50);
-          return updated;
-        });
-      }
-    };
+  if (groupId) {
+    queryClient.setQueryData(["messages", id], (old: any[] = []) => {
+
+      // ✅ prevent duplicate
+      const exists = old.find((m) => m.id === msg.id);
+      if (exists) return old;
+
+      const updated = [...old, msg];
+
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+
+      return updated;
+    });
+  }
+};
+
 
     socket.on("new-message", handlePrivateMessage);
     socket.on("new-group-message", handleGroupMessage);
