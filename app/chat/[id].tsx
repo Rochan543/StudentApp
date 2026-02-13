@@ -23,6 +23,8 @@ import { getSocket, connectSocket } from "@/lib/socket";
 import * as ImagePicker from "expo-image-picker";
 import { apiUpload } from "@/lib/api";
 import { Image } from "react-native";
+import { Modal, Dimensions } from "react-native";
+
 
 
 
@@ -37,13 +39,15 @@ export default function ChatScreen() {
   const [message, setMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<number[]>([]);
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
 
 
   const listRef = useRef<FlatList>(null);
 
   const sendImage = async () => {
   const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    mediaTypes: ["images"],
     quality: 0.7,
   });
 
@@ -280,6 +284,9 @@ const handleGroupMessage = (msg: any) => {
         <FlatList
           ref={listRef}
           data={messages || []}
+          onContentSizeChange={() =>
+            listRef.current?.scrollToEnd({ animated: true })
+          }
           keyExtractor={(item: any, index: number) =>
             item?.id ? item.id.toString() : index.toString()
           }
@@ -302,11 +309,14 @@ const handleGroupMessage = (msg: any) => {
 
               {/* IMAGE MESSAGE */}
                     {item.messageType === "image" && (
-                      <Image
-                        source={{ uri: item.mediaUrl }}
-                        style={{ width: 180, height: 180, borderRadius: 10 }}
-                      />
+                      <Pressable onPress={() => setPreviewImage(item.mediaUrl)}>
+                        <Image
+                          source={{ uri: item.mediaUrl }}
+                          style={{ width: 180, height: 180, borderRadius: 10 }}
+                        />
+                      </Pressable>
                     )}
+
 
                     {/* TEXT MESSAGE */}
                     {item.messageType !== "image" && (
@@ -356,8 +366,40 @@ const handleGroupMessage = (msg: any) => {
 
       </View>
 
+            {/* IMAGE PREVIEW MODAL */}
+      <Modal visible={!!previewImage} transparent>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.9)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Pressable
+            style={{
+              position: "absolute",
+              top: 50,
+              right: 20,
+            }}
+            onPress={() => setPreviewImage(null)}
+          >
+            <Ionicons name="close" size={30} color="#fff" />
+          </Pressable>
+
+          <Image
+            source={{ uri: previewImage || "" }}
+            style={{
+              width: Dimensions.get("window").width,
+              height: Dimensions.get("window").height * 0.7,
+              resizeMode: "contain",
+            }}
+          />
+        </View>
+      </Modal>
+
     </KeyboardAvoidingView>
-  );
+);
 }
 
 // ================= STYLES =================
