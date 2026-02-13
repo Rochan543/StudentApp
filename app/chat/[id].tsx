@@ -24,6 +24,45 @@ import * as ImagePicker from "expo-image-picker";
 import { apiUpload } from "@/lib/api";
 import { Image } from "react-native";
 import { Modal, Dimensions } from "react-native";
+import { Audio } from "expo-av";
+
+
+
+const VoicePlayer = ({ url }: { url: string }) => {
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  // ✅ ADD THIS HERE
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  const playSound = async () => {
+  try {
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
+
+    const { sound } = await Audio.Sound.createAsync({ uri: url });
+    soundRef.current = sound;
+    await sound.playAsync();
+  } catch (e) {
+    console.log("play error", e);
+  }
+};
+
+
+  return (
+    <Pressable onPress={playSound}>
+      <Ionicons name="play-circle" size={30} color="#fff" />
+    </Pressable>
+  );
+};
 
 
 
@@ -40,14 +79,23 @@ export default function ChatScreen() {
   const [onlineUsers, setOnlineUsers] = useState<number[]>([]);
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
 
 
 
   const listRef = useRef<FlatList>(null);
+  useEffect(() => {
+    ImagePicker.requestMediaLibraryPermissionsAsync();
+    Audio.requestPermissionsAsync();
+  }, []);
+
+
 
   const sendImage = async () => {
   const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ["images"],
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
     quality: 0.7,
   });
 
@@ -72,6 +120,63 @@ export default function ChatScreen() {
     messageType: "image",
   });
 };
+
+const startRecording = async () => {
+  try {
+    const permission = await Audio.requestPermissionsAsync();
+    if (!permission.granted) return;
+
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+    });
+
+    const { recording } = await Audio.Recording.createAsync(
+      Audio.RecordingOptionsPresets.HIGH_QUALITY
+    );
+
+    setRecording(recording);
+    setIsRecording(true);
+  } catch (err) {
+    console.log("record start error", err);
+  }
+};
+
+
+
+const stopRecording = async () => {
+  try {
+    if (!recording) return;
+
+    setIsRecording(false);
+
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setRecording(null);
+
+    if (!uri) return;
+
+    const upload = await apiUpload(
+      "/api/upload/chat-voice",
+      uri,
+      "voice.m4a",
+      "audio/m4a"
+    );
+
+    const socket = getSocket();
+
+    socket?.emit("send-message", {
+      senderId: user?.id,
+      receiverId: groupId ? null : partnerId,
+      groupId,
+      mediaUrl: upload.url,
+      messageType: "voice",
+    });
+  } catch (err) {
+    console.log("record stop error", err);
+  }
+};
+
 
 
   // ✅ GROUP CHAT DETECTION
@@ -308,9 +413,11 @@ useEffect(() => {
         <FlatList
           ref={listRef}
           data={messages || []}
-          onContentSizeChange={() =>
-            listRef.current?.scrollToEnd({ animated: true })
+          onContentSizeChange={() => {
+          if (messages?.length) {
+            listRef.current?.scrollToEnd({ animated: true });
           }
+        }}
           keyExtractor={(item: any, index: number) =>
             item?.id ? item.id.toString() : index.toString()
           }
@@ -341,8 +448,15 @@ useEffect(() => {
                       </Pressable>
                     )}
 
+                    {/* VOICE MESSAGE */}
+                    {item.messageType === "voice" && (
+                      <View style={{ padding: 6 }}>
+                        <VoicePlayer url={item.mediaUrl} />
+                      </View>
+                    )}
+
                     {/* TEXT MESSAGE */}
-                  {item.messageType !== "image" && (
+                  {item.messageType === "text" && (
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                       <Text style={{ color: isMe ? "#fff" : "#000" }}>
                         {item.content}
@@ -366,6 +480,15 @@ useEffect(() => {
 
       {/* INPUT */}
       <View style={styles.inputContainer}>
+
+        <Pressable onPress={isRecording ? stopRecording : startRecording}>
+          <Ionicons
+            name={isRecording ? "stop-circle" : "mic"}
+            size={22}
+            color={isRecording ? "red" : "#555"}
+          />
+        </Pressable>
+
 
           {/* IMAGE PICKER */}
           <Pressable onPress={sendImage}>

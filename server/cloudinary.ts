@@ -11,7 +11,22 @@ cloudinary.config({
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_DOC_TYPES = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"];
-const ALLOWED_ALL_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_DOC_TYPES];
+// const ALLOWED_ALL_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_DOC_TYPES];
+const ALLOWED_AUDIO_TYPES = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/mp4",
+  "audio/m4a",
+];
+
+const ALLOWED_ALL_TYPES = [
+  ...ALLOWED_IMAGE_TYPES,
+  ...ALLOWED_DOC_TYPES,
+  ...ALLOWED_AUDIO_TYPES,
+];
+
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_DOC_SIZE = 25 * 1024 * 1024;
@@ -51,6 +66,7 @@ export type CloudinaryFolder =
   | "lms/submissions"
   | "lms/banners"
   | "chat/images"
+  | "chat/voices"
   | "lms/quizzes";
 
 export async function uploadToCloudinary(

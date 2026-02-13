@@ -166,6 +166,32 @@ app.post(
   }
 );
 
+// ✅ CHAT VOICE UPLOAD
+app.post(
+  "/api/upload/chat-voice",
+  authMiddleware,
+  uploadAny.single("file"),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No voice file" });
+      }
+
+      const result = await uploadToCloudinary(
+        req.file.buffer,
+        "chat/voices",
+        { resourceType: "auto" } // IMPORTANT
+      );
+
+      res.json({ url: result.url });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+
+
 
   app.post("/api/upload/course-pdf", authMiddleware, adminMiddleware, uploadDocument.single("file"), async (req: Request, res: Response) => {
     try {
