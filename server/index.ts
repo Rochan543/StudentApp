@@ -281,6 +281,8 @@ socket.on("stop-typing", () => {
 });
 
 
+
+
   // join personal room
   // socket.on("join", (userId) => {
   //   socket.join(`user-${userId}`);
@@ -299,7 +301,16 @@ socket.on("stop-typing", () => {
   });
 
   // send message
-  socket.on("send-message", async (data) => {
+  socket.on(
+  "send-message",
+  async (data: {
+    senderId: number;
+    receiverId?: number | null;
+    groupId?: number | null;
+    content?: string | null;
+    mediaUrl?: string | null;
+    messageType?: string;
+  }) => {
   try {
     const msg = await storage.createMessage({
       senderId: data.senderId,
@@ -309,6 +320,8 @@ socket.on("stop-typing", () => {
       mediaUrl: data.mediaUrl || null,
       messageType: data.messageType || "text",
     });
+    await storage.markDelivered(msg.id);
+
 
     if (data.receiverId) {
       io.to(`user-${data.receiverId}`).emit("new-message", msg);
@@ -331,6 +344,26 @@ socket.on("stop-typing", () => {
   }
     console.log("Socket disconnected:", socket.id);
   });
+
+socket.on("message-delivered", async (messageId) => {
+  const msg = await storage.markDelivered(messageId);
+  io.emit("message-status-updated", {
+    id: messageId,
+    isDelivered: true,
+  });
+});
+
+
+socket.on("message-seen", async (messageId) => {
+  const msg = await storage.markSeen(messageId);
+  io.emit("message-status-updated", {
+    id: messageId,
+    isSeen: true,
+  });
+});
+
+
+
 });
 
   /* 🔹 ADDED SOCKET SERVER */

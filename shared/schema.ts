@@ -192,6 +192,10 @@ export const messages = pgTable("messages", {
   groupId: integer("group_id"),
   content: text("content"),
   mediaUrl: text("media_url"),
+  isDelivered: boolean("is_delivered").default(false),
+  isSeen: boolean("is_seen").default(false),
+  deliveredAt: timestamp("delivered_at"),
+  seenAt: timestamp("seen_at"),
   messageType: text("message_type").notNull().default("text"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

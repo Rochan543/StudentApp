@@ -125,20 +125,23 @@ export default function ChatScreen() {
     const socket = getSocket();
     if (!socket) return;
 
-    const handlePrivateMessage = (msg: any) => {
-  if (!groupId) {
+const handlePrivateMessage = (msg: any) => {
 
-    // ✅ ignore my own socket echo
-    // if (msg.senderId === user?.id) return;
-
-    queryClient.setQueryData(["messages", id], (old: any[] = []) => {
-      const exists = old.find((m) => m.id === msg.id);
-      if (exists) return old;
-
-      return [...old, msg];
-    });
+  // mark delivered ONLY if I am receiver
+  if (msg.senderId !== user?.id) {
+    const socket = getSocket();
+    socket?.emit("message-delivered", msg.id);
   }
+
+  queryClient.setQueryData(["messages", id], (old: any[] = []) => {
+    const exists = old.find((m) => m.id === msg.id);
+    if (exists) return old;
+    return [...old, msg];
+  });
 };
+
+
+
 
 
 const handleGroupMessage = (msg: any) => {
@@ -176,19 +179,40 @@ const handleGroupMessage = (msg: any) => {
     socket.on("stop-typing", () => {
       setTypingUser(null);
     });
+    socket.on("message-status-updated", (update) => {
+  queryClient.setQueryData(["messages", id], (old: any[] = []) =>
+    old.map((m) =>
+      m.id === update.id ? { ...m, ...update } : m
+    )
+  );
+});
+
 
 
 
     return () => {
-      socket.removeAllListeners("new-message");
-      socket.removeAllListeners("new-group-message");
-      socket.off("user-online");
-      socket.off("user-offline");
-      socket.off("typing");
-      socket.off("stop-typing");
+  socket.off("new-message", handlePrivateMessage);
+  socket.off("new-group-message", handleGroupMessage);
+  socket.off("user-online");
+  socket.off("user-offline");
+  socket.off("typing");
+  socket.off("stop-typing");
+  socket.off("message-status-updated");
+};
+  }, [id, groupId, user?.id]);
 
-    };
-  }, [id, groupId]);
+  // ================= EMIT SEEN =================
+useEffect(() => {
+  const socket = getSocket();
+  if (!socket) return;
+
+  messages?.forEach((m: any) => {
+    if (!m.isSeen && m.senderId !== user?.id) {
+      socket.emit("message-seen", m.id);
+    }
+  });
+}, [messages]);
+
 
   // ================= SEND MESSAGE =================
   const sendMessage = useCallback(() => {
@@ -317,13 +341,21 @@ const handleGroupMessage = (msg: any) => {
                       </Pressable>
                     )}
 
-
                     {/* TEXT MESSAGE */}
-                    {item.messageType !== "image" && (
+                  {item.messageType !== "image" && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                       <Text style={{ color: isMe ? "#fff" : "#000" }}>
                         {item.content}
                       </Text>
-                    )}
+
+                      {isMe && (
+                        <Text style={{ fontSize: 10, color: "#ccc" }}>
+                          {item.isSeen ? "✓✓" : item.isDelivered ? "✓" : ""}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+
 
 
               </View>
@@ -344,15 +376,22 @@ const handleGroupMessage = (msg: any) => {
             style={styles.input}
             value={message}
             onChangeText={(text) => {
-              setMessage(text);
+                setMessage(text);
 
-              const socket = getSocket();
-              socket?.emit("typing", {
-                senderName: user?.name,
-                receiverId: partnerId,
-                groupId,
-              });
-            }}
+                const socket = getSocket();
+                if (text.length === 1) {
+                  socket?.emit("typing", {
+                    senderName: user?.name,
+                    receiverId: partnerId,
+                    groupId,
+                  });
+                }
+
+                if (text.length === 0) {
+                  socket?.emit("stop-typing");
+                }
+              }}
+
             placeholder="Type message..."
           />
 

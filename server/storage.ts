@@ -2,6 +2,7 @@ import { db } from "./db";
 import { eq, desc, asc, and, sql, ilike, gte, lte, isNull, inArray } from "drizzle-orm";
 import * as schema from "@shared/schema";
 
+
 export const storage = {
   async createUser(data: { email: string; password: string; name: string; role?: string }) {
     const [user] = await db.insert(schema.users).values(data).returning();
@@ -349,10 +350,31 @@ export const storage = {
     content: data.content || null,
     mediaUrl: data.mediaUrl || null,
     messageType: data.messageType || "text",
+    isDelivered: false,
+    isSeen: false,
   }).returning();
 
   return m;
 },
+
+async markDelivered(messageId: number) {
+  return db.update(schema.messages)
+    .set({
+      isDelivered: true,
+      deliveredAt: new Date(),
+    })
+    .where(eq(schema.messages.id, messageId));
+},
+
+async markSeen(messageId: number) {
+  return db.update(schema.messages)
+    .set({
+      isSeen: true,
+      seenAt: new Date(),
+    })
+    .where(eq(schema.messages.id, messageId));
+},
+
 
 
   // async getMessages(userId1: number, userId2: number) {
@@ -375,6 +397,11 @@ export const storage = {
     messageType: schema.messages.messageType,
     createdAt: schema.messages.createdAt,
     senderName: schema.users.name,
+      // 🔥 ADD THESE
+  isDelivered: schema.messages.isDelivered,
+  isSeen: schema.messages.isSeen,
+  deliveredAt: schema.messages.deliveredAt,
+  seenAt: schema.messages.seenAt,
   })
 
     .from(schema.messages)
@@ -410,6 +437,12 @@ export const storage = {
     messageType: schema.messages.messageType,
     createdAt: schema.messages.createdAt,
     senderName: schema.users.name,
+
+  isDelivered: schema.messages.isDelivered,
+isSeen: schema.messages.isSeen,
+deliveredAt: schema.messages.deliveredAt,
+seenAt: schema.messages.seenAt,
+
   })
     .from(schema.messages)
     .innerJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
