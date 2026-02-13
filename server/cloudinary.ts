@@ -50,6 +50,7 @@ export type CloudinaryFolder =
   | "lms/assignments"
   | "lms/submissions"
   | "lms/banners"
+  | "chat/images"
   | "lms/quizzes";
 
 export async function uploadToCloudinary(

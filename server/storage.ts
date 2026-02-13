@@ -334,10 +334,26 @@ export const storage = {
     return db.select().from(schema.groups).orderBy(desc(schema.groups.createdAt));
   },
 
-  async createMessage(data: { senderId: number; receiverId?: number; groupId?: number; content: string }) {
-    const [m] = await db.insert(schema.messages).values(data).returning();
-    return m;
-  },
+  async createMessage(data: {
+  senderId: number;
+  receiverId?: number | null;
+  groupId?: number | null;
+  content?: string | null;
+  mediaUrl?: string | null;
+  messageType?: string;
+}) {
+  const [m] = await db.insert(schema.messages).values({
+    senderId: data.senderId,
+    receiverId: data.receiverId || null,
+    groupId: data.groupId || null,
+    content: data.content || null,
+    mediaUrl: data.mediaUrl || null,
+    messageType: data.messageType || "text",
+  }).returning();
+
+  return m;
+},
+
 
   // async getMessages(userId1: number, userId2: number) {
 
@@ -355,9 +371,12 @@ export const storage = {
     receiverId: schema.messages.receiverId,
     groupId: schema.messages.groupId,
     content: schema.messages.content,
+    mediaUrl: schema.messages.mediaUrl,
+    messageType: schema.messages.messageType,
     createdAt: schema.messages.createdAt,
     senderName: schema.users.name,
   })
+
     .from(schema.messages)
     .innerJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
     .where(
@@ -387,6 +406,8 @@ export const storage = {
     receiverId: schema.messages.receiverId,
     groupId: schema.messages.groupId,
     content: schema.messages.content,
+    mediaUrl: schema.messages.mediaUrl,
+    messageType: schema.messages.messageType,
     createdAt: schema.messages.createdAt,
     senderName: schema.users.name,
   })

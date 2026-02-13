@@ -142,6 +142,31 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ✅ CHAT IMAGE UPLOAD
+app.post(
+  "/api/upload/chat-image",
+  authMiddleware,
+  uploadImage.single("file"),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file" });
+      }
+
+      const result = await uploadToCloudinary(
+        req.file.buffer,
+        "chat/images",
+        { resourceType: "image" }
+      );
+
+      res.json({ url: result.url });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+
   app.post("/api/upload/course-pdf", authMiddleware, adminMiddleware, uploadDocument.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });

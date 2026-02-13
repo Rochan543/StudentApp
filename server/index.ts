@@ -301,29 +301,28 @@ socket.on("stop-typing", () => {
   // send message
   socket.on("send-message", async (data) => {
   try {
-
     const msg = await storage.createMessage({
-    senderId: data.senderId,
-    receiverId: data.receiverId || null,
-    groupId: data.groupId || null,
-    content: data.content,
-  });
+      senderId: data.senderId,
+      receiverId: data.receiverId || null,
+      groupId: data.groupId || null,
+      content: data.content || null,
+      mediaUrl: data.mediaUrl || null,
+      messageType: data.messageType || "text",
+    });
 
-    // 🔹 PRIVATE CHAT
     if (data.receiverId) {
-  io.to(`user-${data.receiverId}`).emit("new-message", msg);
-}
+      io.to(`user-${data.receiverId}`).emit("new-message", msg);
+    }
 
-
-    // 🔹 GROUP CHAT
     if (data.groupId) {
       io.to(`group-${data.groupId}`).emit("new-group-message", msg);
     }
 
   } catch (err) {
-    console.error("Socket send-message error:", err);
+    console.log("socket error", err);
   }
 });
+
 
 
   socket.on("disconnect", () => {

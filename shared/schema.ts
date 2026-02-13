@@ -190,10 +190,12 @@ export const messages = pgTable("messages", {
   senderId: integer("sender_id").notNull(),
   receiverId: integer("receiver_id"),
   groupId: integer("group_id"),
-  content: text("content").notNull(),
+  content: text("content"),
+  mediaUrl: text("media_url"),
   messageType: text("message_type").notNull().default("text"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
 
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),

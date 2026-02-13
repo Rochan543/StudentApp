@@ -20,6 +20,10 @@ import { useAuth } from "@/lib/auth-context";
 import Colors from "@/constants/colors";
 import * as Haptics from "expo-haptics";
 import { getSocket, connectSocket } from "@/lib/socket";
+import * as ImagePicker from "expo-image-picker";
+import { apiUpload } from "@/lib/api";
+import { Image } from "react-native";
+
 
 
 export default function ChatScreen() {
@@ -36,6 +40,35 @@ export default function ChatScreen() {
 
 
   const listRef = useRef<FlatList>(null);
+
+  const sendImage = async () => {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.7,
+  });
+
+  if (result.canceled) return;
+
+  const img = result.assets[0];
+
+  const upload = await apiUpload(
+    "/api/upload/chat-image",
+    img.uri,
+    "chat.jpg",
+    "image/jpeg"
+  );
+
+  const socket = getSocket();
+
+  socket?.emit("send-message", {
+    senderId: user?.id,
+    receiverId: groupId ? null : partnerId,
+    groupId,
+    mediaUrl: upload.url,
+    messageType: "image",
+  });
+};
+
 
   // ✅ GROUP CHAT DETECTION
   const isGroupChat = id?.startsWith("group-");
@@ -267,9 +300,21 @@ const handleGroupMessage = (msg: any) => {
                 </Text>
               )}
 
-              <Text style={{ color: isMe ? "#fff" : "#000" }}>
-                {item.content}
-              </Text>
+              {/* IMAGE MESSAGE */}
+                    {item.messageType === "image" && (
+                      <Image
+                        source={{ uri: item.mediaUrl }}
+                        style={{ width: 180, height: 180, borderRadius: 10 }}
+                      />
+                    )}
+
+                    {/* TEXT MESSAGE */}
+                    {item.messageType !== "image" && (
+                      <Text style={{ color: isMe ? "#fff" : "#000" }}>
+                        {item.content}
+                      </Text>
+                    )}
+
 
               </View>
             );
@@ -279,31 +324,38 @@ const handleGroupMessage = (msg: any) => {
 
       {/* INPUT */}
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={message}
-          onChangeText={(text) => {
-            setMessage(text);
 
-            const socket = getSocket();
-            socket?.emit("typing", {
-              senderName: user?.name,
-              receiverId: partnerId,
-              groupId,
-            });
-          }}
+          {/* IMAGE PICKER */}
+          <Pressable onPress={sendImage}>
+            <Ionicons name="image" size={22} color="#555" />
+          </Pressable>
 
-          placeholder="Type message..."
-        />
+          <TextInput
+            style={styles.input}
+            value={message}
+            onChangeText={(text) => {
+              setMessage(text);
 
-        <Pressable
-          style={[styles.sendBtn, !message.trim() && { opacity: 0.5 }]}
-          disabled={!message.trim()}
-          onPress={sendMessage}
-        >
-          <Ionicons name="send" color="#fff" size={18} />
-        </Pressable>
+              const socket = getSocket();
+              socket?.emit("typing", {
+                senderName: user?.name,
+                receiverId: partnerId,
+                groupId,
+              });
+            }}
+            placeholder="Type message..."
+          />
+
+          <Pressable
+            style={[styles.sendBtn, !message.trim() && { opacity: 0.5 }]}
+            disabled={!message.trim()}
+            onPress={sendMessage}
+          >
+            <Ionicons name="send" color="#fff" size={18} />
+          </Pressable>
+
       </View>
+
     </KeyboardAvoidingView>
   );
 }
@@ -354,11 +406,14 @@ const styles = StyleSheet.create({
   },
 
   inputContainer: {
-    flexDirection: "row",
-    padding: 10,
-    borderTopWidth: 1,
-    borderColor: "#ddd",
-  },
+  flexDirection: "row",
+  padding: 10,
+  alignItems: "center",
+  gap: 8,
+  borderTopWidth: 1,
+  borderColor: "#ddd",
+},
+
 
   input: {
     flex: 1,
