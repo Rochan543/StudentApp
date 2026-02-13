@@ -6,6 +6,9 @@ import { registerSchema, loginSchema } from "@shared/schema";
 // import { Server as SocketServer } from "socket.io";
 import rateLimit from "express-rate-limit";
 import { uploadImage, uploadDocument, uploadAny, uploadToCloudinary, type CloudinaryFolder } from "./cloudinary";
+import { runInterview, ChatMessage } from "./ai/interviewEngine";
+
+
 
 function paramId(param: string | string[]): number {
   return parseInt(String(param));
@@ -1414,5 +1417,129 @@ app.post("/api/groups/:id/leave", authMiddleware, async (req: Request, res: Resp
       res.status(500).json({ message: err.message });
     }
   });
+
+  // ================= AI MOCK INTERVIEW ROUTES =================
+
+// Create interview session
+app.post("/api/ai/interview/start", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { role, resumeSkills } = req.body;
+
+    const interview = await storage.createAIInterview({
+      userId: req.user!.userId,
+      role,
+      resumeSkills,
+    });
+
+    // First question
+    // const aiResponse = await runInterview(
+    //   `Role: ${role}
+    //    Skills: ${(resumeSkills || []).join(", ")}
+    //    Ask first interview question.`
+    // );
+
+      const aiResponse = await runInterview([
+    {
+      role: "user",
+      content: `Role: ${role}
+  Skills: ${(resumeSkills || []).join(", ")}
+  Ask first interview question.`
+    }
+  ]);
+
+
+    await storage.saveAIInterviewMessage({
+      interviewId: interview.id,
+      sender: "ai",
+      message: aiResponse.question,
+    });
+
+    res.json({
+      interviewId: interview.id,
+      question: aiResponse.question,
+    });
+
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
+// Send answer & get next question
+app.post("/api/ai/interview/message", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { interviewId, answer } = req.body;
+
+    // Save user answer
+    await storage.saveAIInterviewMessage({
+      interviewId,
+      sender: "user",
+      message: answer,
+    });
+
+    const history = await storage.getAIInterviewHistory(interviewId);
+
+      const conversation: ChatMessage[] = [];
+
+      if (Array.isArray(history)) {
+        history.forEach((h: any) => {
+          conversation.push({
+            role: h.sender === "ai" ? "assistant" : "user",
+            content: h.message,
+          });
+        });
+      }
+
+      // Safety fallback
+      if (conversation.length === 0) {
+        conversation.push({
+          role: "user",
+          content: answer,
+        });
+      }
+
+
+const aiResponse = await runInterview(conversation);
+
+
+    await storage.saveAIInterviewMessage({
+      interviewId,
+      sender: "ai",
+      message: aiResponse.question,
+      score: aiResponse.score,
+      feedback: aiResponse.feedback,
+    });
+
+    res.json(aiResponse);
+
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
+// Finish interview
+app.post("/api/ai/interview/finish", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { interviewId } = req.body;
+
+    const history = await storage.getAIInterviewHistory(interviewId);
+
+    const totalScore = history
+      .filter(h => h.score)
+      .reduce((sum, h) => sum + (h.score || 0), 0);
+
+    const interview = await storage.finishAIInterview(interviewId, totalScore);
+
+    res.json(interview);
+
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 }

@@ -3,19 +3,22 @@
   "compilerOptions": {
     "baseUrl": ".",
     "strict": true,
+
+    "typeRoots": [
+      "./node_modules/@types",
+      "./server/types"
+    ],
+
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@shared/*": [
-        "./shared/*"
-      ]
+      "@/*": ["./*"],
+      "@shared/*": ["./shared/*"]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "server/types/**/*.d.ts"
   ]
 }

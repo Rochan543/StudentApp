@@ -290,6 +290,29 @@ export const roadmapItems = pgTable("roadmap_items", {
   whatsappLink: text("whatsapp_link"),
 });
 
+// ================= AI MOCK INTERVIEW =================
+
+export const aiInterviews = pgTable("ai_interviews", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  role: text("role").notNull(),
+  resumeSkills: jsonb("resume_skills").$type<string[]>().default([]),
+  totalScore: real("total_score").default(0),
+  status: text("status").default("active"), // active | completed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const aiInterviewMessages = pgTable("ai_interview_messages", {
+  id: serial("id").primaryKey(),
+  interviewId: integer("interview_id").notNull(),
+  sender: text("sender").notNull(), // ai | user
+  message: text("message").notNull(),
+  score: real("score"),
+  feedback: text("feedback"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   password: true,
@@ -390,6 +413,8 @@ export const insertGroupSchema = createInsertSchema(groups).pick({
   description: true,
 });
 
+
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Course = typeof courses.$inferSelect;
@@ -414,3 +439,5 @@ export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type AttendanceStreak = typeof attendanceStreak.$inferSelect;
 export type Roadmap = typeof roadmaps.$inferSelect;
 export type RoadmapItem = typeof roadmapItems.$inferSelect;
+export type AIInterview = typeof aiInterviews.$inferSelect;
+export type AIInterviewMessage = typeof aiInterviewMessages.$inferSelect;
