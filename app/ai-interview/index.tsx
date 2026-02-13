@@ -23,7 +23,8 @@ export default function AIInterviewScreen() {
 
   // ================= START =================
   async function startInterview() {
-    const token = await AsyncStorage.getItem("token");
+    const token = await AsyncStorage.getItem("auth_token");
+
 
     const res = await axios.post(
       `${API_URL}/api/ai/interview/start`,

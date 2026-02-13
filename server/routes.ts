@@ -1421,16 +1421,30 @@ app.post("/api/groups/:id/leave", authMiddleware, async (req: Request, res: Resp
   // ================= AI MOCK INTERVIEW ROUTES =================
 
 // Create interview session
-app.post("/api/ai/interview/start", async (req: Request, res: Response) => {
+app.post(
+  "/api/ai/interview/start",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+
 
   try {
     const { role, resumeSkills } = req.body;
+
+    if (!role) {
+      return res.status(400).json({ message: "Role is required" });
+    }
+
+    if (!req.user) {
+  return res.status(401).json({ message: "Unauthorized" });
+}
+
 
     const interview = await storage.createAIInterview({
       userId: req.user!.userId,
       role,
       resumeSkills,
     });
+
 
     // First question
     // const aiResponse = await runInterview(
@@ -1468,10 +1482,18 @@ app.post("/api/ai/interview/start", async (req: Request, res: Response) => {
 
 
 // Send answer & get next question
-app.post("/api/ai/interview/message", async (req: Request, res: Response) => {
+app.post(
+  "/api/ai/interview/message",
+  authMiddleware,
+  async (req: Request, res: Response) => {
 
   try {
     const { interviewId, answer } = req.body;
+
+    if (!interviewId || !answer) {
+      return res.status(400).json({ message: "interviewId and answer required" });
+    }
+
 
     // Save user answer
     await storage.saveAIInterviewMessage({
@@ -1523,16 +1545,25 @@ const aiResponse = await runInterview(conversation);
 
 
 // Finish interview
-app.post("/api/ai/interview/finish", async (req: Request, res: Response) => {
+app.post(
+  "/api/ai/interview/finish",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+
 
   try {
     const { interviewId } = req.body;
+    if (!interviewId) {
+  return res.status(400).json({ message: "interviewId required" });
+}
 
-    const history = await storage.getAIInterviewHistory(interviewId);
+    const history = await storage.getAIInterviewHistory(interviewId) || [];
 
-    const totalScore = history
-      .filter(h => h.score)
-      .reduce((sum, h) => sum + (h.score || 0), 0);
+
+    const totalScore = Array.isArray(history)
+  ? history.reduce((sum, h) => sum + (h.score || 0), 0)
+  : 0;
+
 
     const interview = await storage.finishAIInterview(interviewId, totalScore);
 
