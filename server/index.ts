@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import { storage } from "./storage";
 
 
+
 /* 🔹 ADDED */
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -264,6 +265,8 @@ function validateEnv() {
   const io = new Server(httpServer, {
     cors: { origin: "*" },
   });
+  app.set("io", io);
+
 
   io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
@@ -276,9 +279,15 @@ function validateEnv() {
   }
 });
 
-socket.on("stop-typing", () => {
-  socket.broadcast.emit("stop-typing");
+
+socket.on("stop-typing", (data) => {
+  if (data?.groupId) {
+    socket.to(`group-${data.groupId}`).emit("stop-typing");
+  } else if (data?.receiverId) {
+    socket.to(`user-${data.receiverId}`).emit("stop-typing");
+  }
 });
+
 
 
 
@@ -336,6 +345,45 @@ socket.on("stop-typing", () => {
   }
 });
 
+
+// ================= EDIT MESSAGE =================
+socket.on("edit-message", async ({ messageId, newContent }) => {
+  const msg = await storage.editMessage(messageId, newContent);
+
+  if (msg?.receiverId) {
+    io.to(`user-${msg.receiverId}`).emit("message-edited", msg);
+  }
+
+  if (msg?.groupId) {
+    io.to(`group-${msg.groupId}`).emit("message-edited", msg);
+  }
+});
+
+// ================= DELETE MESSAGE =================
+socket.on("delete-message", async ({ messageId }) => {
+  const msg = await storage.deleteMessage(messageId);
+
+  if (msg?.receiverId) {
+    io.to(`user-${msg.receiverId}`).emit("message-deleted", msg);
+  }
+
+  if (msg?.groupId) {
+    io.to(`group-${msg.groupId}`).emit("message-deleted", msg);
+  }
+});
+
+// ================= REACTION =================
+socket.on("react-message", async ({ messageId, userId, emoji }) => {
+  const msg = await storage.toggleReaction(messageId, userId, emoji);
+
+  if (msg?.receiverId) {
+    io.to(`user-${msg.receiverId}`).emit("reaction-updated", msg);
+  }
+
+  if (msg?.groupId) {
+    io.to(`group-${msg.groupId}`).emit("reaction-updated", msg);
+  }
+});
 
 
   socket.on("disconnect", () => {

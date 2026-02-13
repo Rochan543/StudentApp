@@ -1000,6 +1000,23 @@ app.get("/api/messages/group/:groupId", authMiddleware, async (req: Request, res
   }
 });
 
+// ✅ GET SINGLE GROUP INFO
+app.get("/api/groups/:id", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const groupId = paramId(req.params.id);
+    const group = await storage.getGroupById(groupId);
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    res.json(group);
+  } catch (err:any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
    app.get("/api/groups", authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -1043,6 +1060,21 @@ app.get("/api/messages/group/:groupId", authMiddleware, async (req: Request, res
   });
 
   // Group Member routes
+
+  // ✅ LEAVE GROUP
+app.post("/api/groups/:id/leave", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const groupId = paramId(req.params.id);
+    const userId = req.user!.userId;
+
+    await storage.removeGroupMember(groupId, userId);
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
   app.post("/api/groups/:id/members", authMiddleware, adminMiddleware, async (req, res) => {
   try {

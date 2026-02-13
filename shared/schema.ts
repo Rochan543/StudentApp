@@ -198,6 +198,10 @@ export const messages = pgTable("messages", {
   seenAt: timestamp("seen_at"),
   messageType: text("message_type").notNull().default("text"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  edited: boolean("edited").default(false),      // ✅ NEW
+  deleted: boolean("deleted").default(false),    // ✅ NEW
+  reactions: jsonb("reactions").default([]),     // ✅ NEW
+  
 });
 
 

@@ -81,6 +81,10 @@ export default function ChatScreen() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
 
 
 
@@ -209,6 +213,13 @@ const stopRecording = async () => {
 
   const partner = chatList?.find((p: any) => p.id === partnerId);
 
+    // ================= GROUP INFO =================
+    const { data: groupInfo } = useQuery({
+      queryKey: ["group-info", groupId],
+      queryFn: () => apiGet(`/api/groups/${groupId}`),
+      enabled: !!groupId,
+    });
+
   // ================= CONNECT SOCKET =================
   useEffect(() => {
     if (!user?.id) return;
@@ -292,7 +303,23 @@ const handleGroupMessage = (msg: any) => {
   );
 });
 
+socket.on("message-edited", (msg) => {
+  queryClient.setQueryData(["messages", id], (old: any[] = []) =>
+    old.map((m) => (m.id === msg.id ? msg : m))
+  );
+});
 
+socket.on("message-deleted", (msg) => {
+  queryClient.setQueryData(["messages", id], (old: any[] = []) =>
+    old.map((m) => (m.id === msg.id ? msg : m))
+  );
+});
+
+socket.on("reaction-updated", (msg) => {
+  queryClient.setQueryData(["messages", id], (old: any[] = []) =>
+    old.map((m) => (m.id === msg.id ? msg : m))
+  );
+});
 
 
     return () => {
@@ -303,6 +330,10 @@ const handleGroupMessage = (msg: any) => {
   socket.off("typing");
   socket.off("stop-typing");
   socket.off("message-status-updated");
+  socket.off("message-edited");
+socket.off("message-deleted");
+socket.off("reaction-updated");
+
 };
   }, [id, groupId, user?.id]);
 
@@ -320,29 +351,40 @@ useEffect(() => {
 
 
   // ================= SEND MESSAGE =================
-  const sendMessage = useCallback(() => {
-    if (!message.trim()) return;
+ const sendMessage = useCallback(() => {
+  if (!message.trim()) return;
 
-    const socket = getSocket();
+  const socket = getSocket();
 
-    if (groupId) {
-      socket?.emit("send-message", {
-        senderId: user?.id,
-        groupId: groupId,
-        content: message.trim(),
-      });
-    } else {
-      socket?.emit("send-message", {
-        senderId: user?.id,
-        receiverId: partnerId,
-        content: message.trim(),
-      });
-    }
+  if (isEditing && selectedMessage) {
+    socket?.emit("edit-message", {
+      messageId: selectedMessage.id,
+     newContent: message.trim(),
+    });
 
+    setIsEditing(false);
+    setSelectedMessage(null);
     setMessage("");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    return;
+  }
 
-  }, [message, partnerId, user?.id, groupId]);
+  if (groupId) {
+    socket?.emit("send-message", {
+      senderId: user?.id,
+      groupId,
+      content: message.trim(),
+    });
+  } else {
+    socket?.emit("send-message", {
+      senderId: user?.id,
+      receiverId: partnerId,
+      content: message.trim(),
+    });
+  }
+
+  setMessage("");
+}, [message, partnerId, user?.id, groupId, isEditing, selectedMessage]);
+
 
   // ================= CHAT LIST SCREEN =================
   if (isChatList) {
@@ -389,23 +431,27 @@ useEffect(() => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={[styles.header, { paddingTop: insets.top + webTopInset }]}>
-        <Pressable onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} />
-        </Pressable>
+                <Pressable onPress={() => router.back()}>
+                  <Ionicons name="arrow-back" size={22} />
+                </Pressable>
 
-              <View>
-        <Text style={styles.title}>
-          {groupId ? "Study Group" : partner?.name || `User ${partnerId}`}
-        </Text>
+                <View>
+                  <Text style={styles.title}>
+                    {groupId ? groupInfo?.name || "Group" : partner?.name || `User ${partnerId}`}
+                  </Text>
+                </View>
 
-        {!groupId && onlineUsers.includes(partnerId) && (
-          <Text style={{ fontSize: 12, color: "green" }}>
-            Online
-          </Text>
-        )}
-      </View>
+                {groupId && (
+                  <Pressable
+                    onPress={() =>
+                      router.push(`/chat/group-info?groupId=${groupId}`)
+                    }
+                  >
+                    <Ionicons name="information-circle-outline" size={22} />
+                  </Pressable>
+                )}
+              </View>
 
-      </View>
 
       {msgsLoading ? (
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -426,12 +472,17 @@ useEffect(() => {
             const isMe = item.senderId === user?.id;
 
             return (
-              <View
+              <Pressable
+                onLongPress={() => {
+                  setSelectedMessage(item);
+                  setShowActionMenu(true);
+                }}
                 style={[
                   styles.messageBubble,
                   isMe ? styles.myMessage : styles.otherMessage,
                 ]}
               >
+
                 {groupId && !isMe && (
                 <Text style={{ fontSize: 11, color: "#666" }}>
                   {item.senderName}
@@ -456,23 +507,35 @@ useEffect(() => {
                     )}
 
                     {/* TEXT MESSAGE */}
-                  {item.messageType === "text" && (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <Text style={{ color: isMe ? "#fff" : "#000" }}>
-                        {item.content}
-                      </Text>
+                 {item.messageType === "text" && (
+                    <View>
 
-                      {isMe && (
-                        <Text style={{ fontSize: 10, color: "#ccc" }}>
-                          {item.isSeen ? "✓✓" : item.isDelivered ? "✓" : ""}
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text style={{ color: isMe ? "#fff" : "#000" }}>
+                          {item.deleted ? "This message was deleted" : item.content}
+
+                          {item.edited && !item.deleted && (
+                            <Text style={{ fontSize: 10, color: "#ccc" }}> (edited)</Text>
+                          )}
+                        </Text>
+
+                        {isMe && (
+                          <Text style={{ fontSize: 10, color: "#ccc" }}>
+                            {item.isSeen ? "✓✓" : item.isDelivered ? "✓" : ""}
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* ✅ REACTIONS */}
+                      {item.reactions?.length > 0 && (
+                        <Text style={{ fontSize: 12, marginTop: 4, opacity: 0.9 }}>
+                          {item.reactions.map((r:any) => r.emoji).join(" ")}
                         </Text>
                       )}
+
                     </View>
                   )}
-
-
-
-              </View>
+              </Pressable>
             );
           }}
         />
@@ -515,7 +578,7 @@ useEffect(() => {
                 }
               }}
 
-            placeholder="Type message..."
+            placeholder={isEditing ? "Editing message..." : "Type message..."}
           />
 
           <Pressable
@@ -559,6 +622,56 @@ useEffect(() => {
           />
         </View>
       </Modal>
+      <Modal visible={showActionMenu} transparent animationType="fade">
+  <Pressable
+    style={{ flex:1, backgroundColor:"rgba(0,0,0,0.4)", justifyContent:"center", alignItems:"center" }}
+    onPress={()=>setShowActionMenu(false)}
+  >
+
+<View style={{ backgroundColor:"#fff", padding:20, borderRadius:12, width:250 }}>
+
+{selectedMessage?.senderId === user?.id && (
+<>
+<Pressable
+  onPress={()=>{
+    if (!selectedMessage.deleted) {
+  setMessage(selectedMessage.content);
+  setIsEditing(true);
+}
+    setShowActionMenu(false);
+  }}>
+<Text>Edit</Text>
+</Pressable>
+
+<Pressable
+  onPress={()=>{
+    getSocket()?.emit("delete-message", {
+  messageId: selectedMessage.id,
+});
+    setShowActionMenu(false);
+  }}>
+<Text style={{ color:"red", marginTop:10 }}>Delete</Text>
+</Pressable>
+</>
+)}
+
+<Pressable
+  onPress={()=>{
+      getSocket()?.emit("react-message", {
+      messageId: selectedMessage.id,
+      userId: user?.id,
+      emoji: "❤️",
+    });
+
+    setShowActionMenu(false);
+  }}>
+<Text style={{ marginTop:10 }}>❤️ React</Text>
+</Pressable>
+
+</View>
+</Pressable>
+</Modal>
+
 
     </KeyboardAvoidingView>
 );

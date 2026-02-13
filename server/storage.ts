@@ -375,6 +375,66 @@ async markSeen(messageId: number) {
     .where(eq(schema.messages.id, messageId));
 },
 
+// ================= MESSAGE EDIT =================
+async editMessage(messageId: number, newContent: string) {
+  const [m] = await db.update(schema.messages)
+    .set({
+      content: newContent,
+      edited: true,
+    })
+    .where(eq(schema.messages.id, messageId))
+    .returning();
+
+  return m;
+},
+
+// ================= MESSAGE DELETE =================
+async deleteMessage(messageId: number) {
+  const [m] = await db.update(schema.messages)
+    .set({
+      deleted: true,
+      content: "This message was deleted",
+      mediaUrl: null,
+    })
+    .where(eq(schema.messages.id, messageId))
+    .returning();
+
+  return m;
+},
+
+// ================= MESSAGE REACTION =================
+async toggleReaction(messageId: number, userId: number, emoji: string) {
+
+  const [msg] = await db.select()
+    .from(schema.messages)
+    .where(eq(schema.messages.id, messageId));
+
+  const reactions = (msg?.reactions || []) as any[];
+
+  const existing = reactions.find(
+    (r) => r.userId === userId && r.emoji === emoji
+  );
+
+  let updated;
+
+  if (existing) {
+    // remove reaction
+    updated = reactions.filter(
+      (r) => !(r.userId === userId && r.emoji === emoji)
+    );
+  } else {
+    // add reaction
+    updated = [...reactions, { userId, emoji }];
+  }
+
+  const [m] = await db.update(schema.messages)
+    .set({ reactions: updated })
+    .where(eq(schema.messages.id, messageId))
+    .returning();
+
+  return m;
+},
+
 
 
   // async getMessages(userId1: number, userId2: number) {
@@ -402,6 +462,9 @@ async markSeen(messageId: number) {
   isSeen: schema.messages.isSeen,
   deliveredAt: schema.messages.deliveredAt,
   seenAt: schema.messages.seenAt,
+  edited: schema.messages.edited,
+  deleted: schema.messages.deleted,
+  reactions: schema.messages.reactions,
   })
 
     .from(schema.messages)
@@ -438,10 +501,13 @@ async markSeen(messageId: number) {
     createdAt: schema.messages.createdAt,
     senderName: schema.users.name,
 
-  isDelivered: schema.messages.isDelivered,
-isSeen: schema.messages.isSeen,
-deliveredAt: schema.messages.deliveredAt,
-seenAt: schema.messages.seenAt,
+      isDelivered: schema.messages.isDelivered,
+    isSeen: schema.messages.isSeen,
+    deliveredAt: schema.messages.deliveredAt,
+    seenAt: schema.messages.seenAt,
+    edited: schema.messages.edited,
+    deleted: schema.messages.deleted,
+    reactions: schema.messages.reactions,
 
   })
     .from(schema.messages)

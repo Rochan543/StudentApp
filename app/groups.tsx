@@ -95,22 +95,44 @@ export default function GroupsScreen() {
             </View>
           </View>
           <View style={styles.actionButtons}>
-            <Pressable
-              style={styles.callBtn}
-              onPress={(e) => { e.stopPropagation(); handleCall(item.name); }}
-              hitSlop={4}
-            >
-              <Ionicons name="call-outline" size={18} color={Colors.success} />
-            </Pressable>
-            <Pressable
-              style={styles.callBtn}
-              onPress={(e) => { e.stopPropagation(); handleVideoCall(item.name); }}
-              hitSlop={4}
-            >
-              <Ionicons name="videocam-outline" size={18} color={Colors.primary} />
-            </Pressable>
-            <Ionicons name="chatbubble-outline" size={18} color={Colors.primary} />
-          </View>
+
+  {/* Voice Call */}
+  <Pressable
+    style={styles.callBtn}
+    onPress={(e) => { 
+      e.stopPropagation(); 
+      handleCall(item.name); 
+    }}
+  >
+    <Ionicons name="call-outline" size={18} color={Colors.success} />
+  </Pressable>
+
+  {/* Video Call */}
+  <Pressable
+    style={styles.callBtn}
+    onPress={(e) => { 
+      e.stopPropagation(); 
+      handleVideoCall(item.name); 
+    }}
+  >
+    <Ionicons name="videocam-outline" size={18} color={Colors.primary} />
+  </Pressable>
+
+  {/* Group Info */}
+<Pressable
+  style={styles.callBtn}
+  onPress={() => {
+    router.push(`/chat/group-info?groupId=${item.id}`);
+  }}
+>
+  <Ionicons
+    name="information-circle-outline"
+    size={18}
+    color={Colors.warning}
+  />
+</Pressable>
+</View>
+
         </View>
       </Pressable>
     );
