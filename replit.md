@@ -1,4 +1,4 @@
-# LearnHub - Learning Management System
+# RepatiKosam Group - Learning Management System
 
 ## Overview
 A comprehensive LMS mobile app built with Expo React Native (frontend) and Express + PostgreSQL (backend). Features role-based access control with secure admin authentication, course management with Cloudinary storage (images, brochures, PDFs), enrollment with coupon codes, assignments with per-user question sets, auto-graded quizzes with exam mode, leaderboard with auto-update, meetings with granular assignment (course/group/user), attendance with streak tracking, leave request system with admin approval, user-specific roadmaps with course locking, real-time chat, notifications, group member management, and banner/showcase system.

@@ -75,7 +75,7 @@ export default function LoginScreen() {
           <View style={styles.iconCircle}>
             <Ionicons name="school" size={40} color="#fff" />
           </View>
-          <Text style={styles.appName}>LearnHub</Text>
+          <Text style={styles.appName}>RepatiKosam Group</Text>
           <Text style={styles.subtitle}>Sign in to continue learning</Text>
         </View>
 

@@ -79,7 +79,7 @@ export default function RegisterScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join LearnHub and start your journey</Text>
+          <Text style={styles.subtitle}>Join RepatiKosam Group and start your journey</Text>
         </View>
 
         {!!error && (
