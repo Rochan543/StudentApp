@@ -409,7 +409,7 @@ app.post(
         message: `You have been enrolled in ${course.title}`,
         type: "success",
       });
-      await storage.updateLeaderboard(req.user!.userId, {});
+      // await storage.updateLeaderboard(req.user!.userId, {});
       res.json(enrollment);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -879,7 +879,7 @@ app.post(
   app.post("/api/attendance", authMiddleware, async (req: Request, res: Response) => {
     try {
       const record = await storage.markAttendance({ meetingId: req.body.meetingId, userId: req.user!.userId });
-      await storage.updateLeaderboard(req.user!.userId, { attendancePoints: 5 });
+      // await storage.updateLeaderboard(req.user!.userId, { attendancePoints: 5 });
       res.json(record);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -1416,6 +1416,8 @@ app.post("/api/groups/:id/leave", authMiddleware, async (req: Request, res: Resp
       res.status(500).json({ message: err.message });
     }
   });
+
+  
 
 
 }

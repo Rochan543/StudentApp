@@ -305,6 +305,9 @@ export const storage = {
     const existing = await db.select().from(schema.attendance).where(and(eq(schema.attendance.meetingId, data.meetingId), eq(schema.attendance.userId, data.userId)));
     if (existing.length > 0) return existing[0];
     const [a] = await db.insert(schema.attendance).values(data).returning();
+    await this.updateLeaderboard(data.userId, {
+      attendancePoints: 5, // give 5 points per attendance
+    });
     return a;
   },
 
@@ -578,24 +581,83 @@ async toggleReaction(messageId: number, userId: number, emoji: string) {
       .orderBy(desc(schema.leaderboard.totalPoints));
   },
 
-  async updateLeaderboard(userId: number, points: Partial<{ attendancePoints: number; assignmentPoints: number; quizPoints: number; streakPoints: number }>) {
-    const existing = await db.select().from(schema.leaderboard).where(eq(schema.leaderboard.userId, userId));
-    if (existing.length === 0) {
-      const totalPoints = (points.attendancePoints || 0) + (points.assignmentPoints || 0) + (points.quizPoints || 0) + (points.streakPoints || 0);
-      const [entry] = await db.insert(schema.leaderboard).values({ userId, ...points, totalPoints, updatedAt: new Date() }).returning();
-      return entry;
-    }
-    const current = existing[0];
-    const updated = {
-      attendancePoints: points.attendancePoints !== undefined ? points.attendancePoints : current.attendancePoints,
-      assignmentPoints: points.assignmentPoints !== undefined ? points.assignmentPoints : current.assignmentPoints,
-      quizPoints: points.quizPoints !== undefined ? points.quizPoints : current.quizPoints,
-      streakPoints: points.streakPoints !== undefined ? points.streakPoints : current.streakPoints,
-    };
-    const totalPoints = updated.attendancePoints + updated.assignmentPoints + updated.quizPoints + updated.streakPoints;
-    const [entry] = await db.update(schema.leaderboard).set({ ...updated, totalPoints, updatedAt: new Date() }).where(eq(schema.leaderboard.id, current.id)).returning();
+ async updateLeaderboard(userId: number, points: Partial<{
+  attendancePoints: number;
+  assignmentPoints: number;
+  quizPoints: number;
+  streakPoints: number;
+}>) {
+
+  const existing = await db.select()
+    .from(schema.leaderboard)
+    .where(eq(schema.leaderboard.userId, userId));
+
+  if (existing.length === 0) {
+
+    const attendancePoints = points.attendancePoints || 0;
+    const assignmentPoints = points.assignmentPoints || 0;
+    const quizPoints = points.quizPoints || 0;
+    const streakPoints = points.streakPoints || 0;
+
+    const totalPoints =
+      attendancePoints +
+      assignmentPoints +
+      quizPoints +
+      streakPoints;
+
+    const [entry] = await db.insert(schema.leaderboard)
+      .values({
+        userId,
+        attendancePoints,
+        assignmentPoints,
+        quizPoints,
+        streakPoints,
+        totalPoints,
+        updatedAt: new Date(),
+      })
+      .returning();
+
     return entry;
-  },
+  }
+
+  const current = existing[0];
+
+  const updated = {
+    attendancePoints:
+  current.attendancePoints + (points.attendancePoints || 0),
+
+      assignmentPoints:
+    points.assignmentPoints !== undefined
+      ? points.assignmentPoints
+      : current.assignmentPoints,
+
+
+    quizPoints:
+      current.quizPoints + (points.quizPoints || 0),
+
+    streakPoints:
+      current.streakPoints + (points.streakPoints || 0),
+  };
+
+  const totalPoints =
+    updated.attendancePoints +
+    updated.assignmentPoints +
+    updated.quizPoints +
+    updated.streakPoints;
+
+  const [entry] = await db.update(schema.leaderboard)
+    .set({
+      ...updated,
+      totalPoints,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.leaderboard.userId, userId))
+    .returning();
+
+  return entry;
+},
+
+
 
   async createBanner(data: { title: string; subtitle?: string; imageUrl?: string; link?: string; isActive?: boolean; createdBy: number }) {
     const [b] = await db.insert(schema.banners).values(data).returning();
