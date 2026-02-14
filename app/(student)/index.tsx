@@ -23,7 +23,7 @@ import Colors from "@/constants/colors";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 const quickLinks = [
-  { title: "AI Interview", icon: "mic" as const, color: "#2563EB", bg: "#DBEAFE", route: "/ai-interview" },
+  // { title: "AI Interview", icon: "mic" as const, color: "#2563EB", bg: "#DBEAFE", route: "/ai-interview" },
   { title: "Assignments", icon: "document-text" as const, color: "#EC4899", bg: "#FCE7F3", route: "/assignments-list" },
   { title: "Quizzes", icon: "help-circle" as const, color: "#F97316", bg: "#FFF7ED", route: "/quizzes-list" },
   { title: "Meetings", icon: "videocam" as const, color: Colors.primary, bg: "#DBEAFE", route: "/meetings" },

@@ -891,48 +891,48 @@ async toggleReaction(messageId: number, userId: number, emoji: string) {
 
    // ================= AI MOCK INTERVIEW =================
 
-  async createAIInterview(data: {
-    userId: number;
-    role: string;
-    resumeSkills: string[];
-  }) {
-    const [i] = await db
-      .insert(schema.aiInterviews)
-      .values(data)
-      .returning();
-    return i;
-  },
+  // async createAIInterview(data: {
+  //   userId: number;
+  //   role: string;
+  //   resumeSkills: string[];
+  // }) {
+  //   const [i] = await db
+  //     .insert(schema.aiInterviews)
+  //     .values(data)
+  //     .returning();
+  //   return i;
+  // },
 
-  async saveAIInterviewMessage(data: {
-    interviewId: number;
-    sender: "ai" | "user";
-    message: string;
-    score?: number;
-    feedback?: string;
-  }) {
-    const [m] = await db
-      .insert(schema.aiInterviewMessages)
-      .values(data)
-      .returning();
-    return m;
-  },
+  // async saveAIInterviewMessage(data: {
+  //   interviewId: number;
+  //   sender: "ai" | "user";
+  //   message: string;
+  //   score?: number;
+  //   feedback?: string;
+  // }) {
+  //   const [m] = await db
+  //     .insert(schema.aiInterviewMessages)
+  //     .values(data)
+  //     .returning();
+  //   return m;
+  // },
 
-  async getAIInterviewHistory(interviewId: number) {
-    return db
-      .select()
-      .from(schema.aiInterviewMessages)
-      .where(eq(schema.aiInterviewMessages.interviewId, interviewId))
-      .orderBy(asc(schema.aiInterviewMessages.createdAt));
-  },
+  // async getAIInterviewHistory(interviewId: number) {
+  //   return db
+  //     .select()
+  //     .from(schema.aiInterviewMessages)
+  //     .where(eq(schema.aiInterviewMessages.interviewId, interviewId))
+  //     .orderBy(asc(schema.aiInterviewMessages.createdAt));
+  // },
 
-  async finishAIInterview(interviewId: number, totalScore: number) {
-    const [i] = await db
-      .update(schema.aiInterviews)
-      .set({ status: "completed", totalScore })
-      .where(eq(schema.aiInterviews.id, interviewId))
-      .returning();
-    return i;
-  },
+  // async finishAIInterview(interviewId: number, totalScore: number) {
+  //   const [i] = await db
+  //     .update(schema.aiInterviews)
+  //     .set({ status: "completed", totalScore })
+  //     .where(eq(schema.aiInterviews.id, interviewId))
+  //     .returning();
+  //   return i;
+  // },
 };
 // };
 
